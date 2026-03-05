@@ -13,6 +13,10 @@ A static web MVP for visualizing life in weeks.
   - commuting/transport hours/day
   - errands/shopping hours/day
 - Renders one box per week of life expectancy.
+- Separates the calendar into:
+  - completed weeks
+  - projected sleep weeks
+  - remaining awake weeks
 - Colors boxes as:
   - grey: weeks already lived
   - black: projected future sleep time (age-based sleep model)

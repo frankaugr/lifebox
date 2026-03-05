@@ -148,7 +148,33 @@
 
       <section class="panel" aria-labelledby="grid-title">
         <h2 id="grid-title">Life calendar (1 box = 1 week)</h2>
-        <div id="weeksGrid" class="weeks-grid" aria-label="Life in weeks grid"></div>
+        <div class="grid-sections">
+          <article class="grid-section" aria-labelledby="completed-title">
+            <h3 id="completed-title">Completed weeks</h3>
+            <p id="completedMeta" class="grid-meta"></p>
+            <div
+              id="completedWeeksGrid"
+              class="weeks-grid"
+              aria-label="Completed weeks grid"
+            ></div>
+          </article>
+
+          <article class="grid-section" aria-labelledby="sleep-title">
+            <h3 id="sleep-title">Projected sleep weeks</h3>
+            <p id="sleepMeta" class="grid-meta"></p>
+            <div id="sleepWeeksGrid" class="weeks-grid" aria-label="Projected sleep weeks grid"></div>
+          </article>
+
+          <article class="grid-section" aria-labelledby="remaining-title">
+            <h3 id="remaining-title">Remaining awake weeks</h3>
+            <p id="remainingMeta" class="grid-meta"></p>
+            <div
+              id="remainingWeeksGrid"
+              class="weeks-grid"
+              aria-label="Remaining awake weeks grid"
+            ></div>
+          </article>
+        </div>
       </section>
     </main>
 

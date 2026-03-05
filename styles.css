@@ -5,15 +5,15 @@
   --surface: #ffffff;
   --border: #dadde7;
 
-  --lived: #979dad;
-  --sleep: #1a1a1a;
-  --phone: #0f62d6;
-  --eating: #db6a2d;
-  --hygiene: #00a97f;
-  --chores: #9c4fd9;
-  --commute: #d23d7b;
-  --errands: #f0a100;
-  --free: #f3f4f8;
+  --lived: #707784;
+  --sleep: #101418;
+  --phone: #0a66ff;
+  --eating: #ff7a00;
+  --hygiene: #00a884;
+  --chores: #7f3fcf;
+  --commute: #d7263d;
+  --errands: #f2c100;
+  --free: #eef2f8;
 
   --cell-size: 11px;
   --cell-gap: 2px;
@@ -211,6 +211,30 @@ button:hover {
   background: var(--free);
 }
 
+.grid-sections {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.grid-section {
+  border: 1px dashed #cdd4e2;
+  border-radius: 10px;
+  padding: 0.7rem;
+  background: #fbfcff;
+}
+
+.grid-section h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.grid-meta {
+  margin: 0.25rem 0 0.55rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
 .weeks-grid {
   display: grid;
   grid-template-columns: repeat(52, var(--cell-size));
@@ -230,7 +254,7 @@ button:hover {
 
 .week.lived {
   background: var(--lived);
-  border-color: #8b90a0;
+  border-color: #616875;
 }
 
 .week.sleep {
@@ -240,32 +264,37 @@ button:hover {
 
 .week.phone {
   background: var(--phone);
-  border-color: #0b50af;
+  border-color: #004dcb;
 }
 
 .week.eating {
   background: var(--eating);
-  border-color: #b45524;
+  border-color: #cf6400;
 }
 
 .week.hygiene {
   background: var(--hygiene);
-  border-color: #008e6b;
+  border-color: #008567;
 }
 
 .week.chores {
   background: var(--chores);
-  border-color: #8340b9;
+  border-color: #6730ac;
 }
 
 .week.commute {
   background: var(--commute);
-  border-color: #b53168;
+  border-color: #a5182e;
 }
 
 .week.errands {
   background: var(--errands);
-  border-color: #cf8d00;
+  border-color: #c89f00;
+}
+
+.week.free {
+  background: var(--free);
+  border-color: #d4dae7;
 }
 
 @media (max-width: 680px) {

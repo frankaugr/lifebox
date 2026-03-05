@@ -67,7 +67,12 @@ const lifeExpectancyInput = document.getElementById("lifeExpectancy");
 const validationMessage = document.getElementById("validationMessage");
 const infoMessage = document.getElementById("infoMessage");
 const summaryEl = document.getElementById("summary");
-const gridEl = document.getElementById("weeksGrid");
+const completedGridEl = document.getElementById("completedWeeksGrid");
+const sleepGridEl = document.getElementById("sleepWeeksGrid");
+const remainingGridEl = document.getElementById("remainingWeeksGrid");
+const completedMetaEl = document.getElementById("completedMeta");
+const sleepMetaEl = document.getElementById("sleepMeta");
+const remainingMetaEl = document.getElementById("remainingMeta");
 
 const activityInputs = ACTIVITY_FIELDS.map((field) => ({
   ...field,
@@ -279,28 +284,43 @@ function renderSummary(model) {
 }
 
 function renderGrid(model) {
-  const fragment = document.createDocumentFragment();
-  let weekNumber = 1;
+  const completedFragment = document.createDocumentFragment();
+  const sleepFragment = document.createDocumentFragment();
+  const remainingFragment = document.createDocumentFragment();
+
+  const sleepWeeks = model.segmentWeeks.sleep;
+  const awakeFutureWeeks = Math.max(0, model.futureWeeks - sleepWeeks);
+
+  completedMetaEl.textContent = `${formatWeeks(model.livedWeeks)} already lived`;
+  sleepMetaEl.textContent = `${formatWeeks(sleepWeeks)} expected spent sleeping`;
+  remainingMetaEl.textContent = `${formatWeeks(awakeFutureWeeks)} expected awake time`;
 
   for (let week = 0; week < model.livedWeeks; week += 1) {
     const box = document.createElement("div");
     box.className = "week lived";
-    box.title = `Week ${weekNumber}: lived`;
-    fragment.appendChild(box);
-    weekNumber += 1;
+    box.title = `Completed week ${week + 1}`;
+    completedFragment.appendChild(box);
   }
 
-  for (const segment of model.futureSegments) {
+  for (let week = 0; week < sleepWeeks; week += 1) {
+    const box = document.createElement("div");
+    box.className = "week sleep";
+    box.title = `Projected sleep week ${week + 1}`;
+    sleepFragment.appendChild(box);
+  }
+
+  for (const segment of model.futureSegments.filter((entry) => entry.key !== "sleep")) {
     for (let week = 0; week < segment.weeks; week += 1) {
       const box = document.createElement("div");
       box.className = `week ${segment.cssClass}`;
-      box.title = `Week ${weekNumber}: ${segment.titleLabel}`;
-      fragment.appendChild(box);
-      weekNumber += 1;
+      box.title = segment.titleLabel;
+      remainingFragment.appendChild(box);
     }
   }
 
-  gridEl.replaceChildren(fragment);
+  completedGridEl.replaceChildren(completedFragment);
+  sleepGridEl.replaceChildren(sleepFragment);
+  remainingGridEl.replaceChildren(remainingFragment);
 }
 
 function renderInfo(model) {
