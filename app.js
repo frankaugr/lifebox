@@ -276,6 +276,7 @@ function renderSummary(model) {
     }
   ];
 
+  if (!summaryEl) return;
   summaryEl.innerHTML = stats
     .map(
       (stat) => `

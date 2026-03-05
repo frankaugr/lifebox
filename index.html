@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BoxLife MVP</title>
+    <title>BoxLife</title>
     <meta
       name="description"
       content="A life-in-weeks visualization showing time already lived, projected sleep, and projected phone use."
@@ -13,11 +13,10 @@
   <body>
     <main class="app">
       <header class="hero">
-        <p class="eyebrow">BoxLife MVP</p>
+        <p class="eyebrow">BoxLife</p>
         <h1>Your life in weeks</h1>
         <p>
-          Enter your current age and daily averages. This web MVP uses manual input only (mobile
-          apps can later read device usage stats).
+          Enter your age and daily habits below. Each box represents one week of your life.
         </p>
       </header>
 
@@ -42,150 +41,86 @@
             />
           </label>
 
-          <label class="field" for="eatingTime">
-            <span>Eating + meal prep (hours/day)</span>
-            <input
-              id="eatingTime"
-              name="eatingTime"
-              type="number"
-              min="0"
-              max="24"
-              step="0.1"
-              value="1.5"
-            />
-          </label>
-
-          <label class="field" for="hygieneTime">
-            <span>Hygiene + bathroom (hours/day)</span>
-            <input
-              id="hygieneTime"
-              name="hygieneTime"
-              type="number"
-              min="0"
-              max="24"
-              step="0.1"
-              value="1"
-            />
-          </label>
-
-          <label class="field" for="choresTime">
-            <span>Household chores/admin (hours/day)</span>
-            <input
-              id="choresTime"
-              name="choresTime"
-              type="number"
-              min="0"
-              max="24"
-              step="0.1"
-              value="1"
-            />
-          </label>
-
-          <label class="field" for="commuteTime">
-            <span>Commuting/transport (hours/day)</span>
-            <input
-              id="commuteTime"
-              name="commuteTime"
-              type="number"
-              min="0"
-              max="24"
-              step="0.1"
-              value="0.7"
-            />
-          </label>
-
-          <label class="field" for="errandsTime">
-            <span>Errands/shopping (hours/day)</span>
-            <input
-              id="errandsTime"
-              name="errandsTime"
-              type="number"
-              min="0"
-              max="24"
-              step="0.1"
-              value="0.4"
-            />
-          </label>
-
-          <label class="field" for="lifeExpectancy">
-            <span>Life expectancy (years)</span>
-            <input
-              id="lifeExpectancy"
-              name="lifeExpectancy"
-              type="number"
-              min="1"
-              max="120"
-              step="0.1"
-              value="80"
-            />
-          </label>
-
-          <button type="submit">Update visualisation</button>
+          <input id="eatingTime" type="hidden" value="1.5" />
+          <input id="hygieneTime" type="hidden" value="1" />
+          <input id="choresTime" type="hidden" value="1" />
+          <input id="commuteTime" type="hidden" value="0.7" />
+          <input id="errandsTime" type="hidden" value="0.4" />
+          <input id="lifeExpectancy" type="hidden" value="80" />
         </form>
         <p id="validationMessage" class="validation" role="status" aria-live="polite"></p>
         <p id="infoMessage" class="info" role="status" aria-live="polite"></p>
-      </section>
-
-      <section class="panel" aria-labelledby="summary-title">
-        <h2 id="summary-title">Summary</h2>
-        <div id="summary" class="summary" aria-live="polite"></div>
-      </section>
-
-      <section class="panel" aria-labelledby="legend-title">
-        <h2 id="legend-title">Legend</h2>
-        <div class="legend">
-          <div class="legend-item"><span class="swatch lived"></span>Lived</div>
-          <div class="legend-item"><span class="swatch sleep"></span>Projected sleep</div>
-          <div class="legend-item"><span class="swatch phone"></span>Projected phone use</div>
-          <div class="legend-item"><span class="swatch eating"></span>Projected eating + meal prep</div>
-          <div class="legend-item"><span class="swatch hygiene"></span>Projected hygiene + bathroom</div>
-          <div class="legend-item"><span class="swatch chores"></span>Projected chores/admin</div>
-          <div class="legend-item"><span class="swatch commute"></span>Projected commuting/transport</div>
-          <div class="legend-item"><span class="swatch errands"></span>Projected errands/shopping</div>
-          <div class="legend-item"><span class="swatch free"></span>Other future time</div>
-        </div>
       </section>
 
       <section class="panel" aria-labelledby="grid-title">
         <h2 id="grid-title">Life calendar (1 box = 1 week)</h2>
         <div class="grid-sections">
           <article class="grid-section" aria-labelledby="completed-title">
-            <h3 id="completed-title">Completed weeks</h3>
-            <p id="completedMeta" class="grid-meta"></p>
+            <div class="grid-section-info">
+              <h3 id="completed-title">Completed weeks</h3>
+              <p id="completedMeta" class="grid-meta"></p>
+            </div>
             <div
               id="completedWeeksGrid"
               class="weeks-grid"
               aria-label="Completed weeks grid"
             ></div>
+            <div class="legend legend-inline">
+              <div class="legend-item"><span class="swatch lived"></span>Lived</div>
+            </div>
           </article>
 
           <article class="grid-section" aria-labelledby="sleep-title">
-            <h3 id="sleep-title">Projected sleep weeks</h3>
-            <p id="sleepMeta" class="grid-meta"></p>
+            <div class="grid-section-info">
+              <h3 id="sleep-title">Projected sleep weeks</h3>
+              <p id="sleepMeta" class="grid-meta"></p>
+            </div>
             <div id="sleepWeeksGrid" class="weeks-grid" aria-label="Projected sleep weeks grid"></div>
+            <div class="legend legend-inline">
+              <div class="legend-item"><span class="swatch sleep"></span>Sleep</div>
+            </div>
           </article>
 
           <article class="grid-section" aria-labelledby="activities-title">
-            <h3 id="activities-title">Projected activity weeks</h3>
-            <p id="activitiesMeta" class="grid-meta"></p>
+            <div class="grid-section-info">
+              <h3 id="activities-title">Projected activity weeks</h3>
+              <p id="activitiesMeta" class="grid-meta"></p>
+            </div>
             <div
               id="activitiesWeeksGrid"
               class="weeks-grid"
               aria-label="Projected activities weeks grid"
             ></div>
+            <div class="legend legend-inline">
+              <div class="legend-item"><span class="swatch eating"></span>Eating</div>
+              <div class="legend-item"><span class="swatch hygiene"></span>Hygiene</div>
+              <div class="legend-item"><span class="swatch chores"></span>Chores</div>
+              <div class="legend-item"><span class="swatch commute"></span>Commute</div>
+              <div class="legend-item"><span class="swatch errands"></span>Errands</div>
+            </div>
           </article>
 
           <article class="grid-section section-break" aria-labelledby="remaining-title">
-            <h3 id="remaining-title">Remaining awake weeks</h3>
-            <p id="remainingMeta" class="grid-meta"></p>
+            <div class="grid-section-info">
+              <h3 id="remaining-title">Remaining awake weeks</h3>
+              <p id="remainingMeta" class="grid-meta"></p>
+            </div>
             <div
               id="remainingWeeksGrid"
               class="weeks-grid"
               aria-label="Remaining awake weeks grid"
             ></div>
+            <div class="legend legend-inline">
+              <div class="legend-item"><span class="swatch phone"></span>Screen time</div>
+              <div class="legend-item"><span class="swatch free"></span>Free time</div>
+            </div>
           </article>
         </div>
       </section>
+
+      <footer class="footer">
+        <p>This is all of them.</p>
+      </footer>
     </main>
 
     <script src="app.js"></script>
