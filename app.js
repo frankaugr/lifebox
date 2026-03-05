@@ -75,6 +75,7 @@ const completedMetaEl = document.getElementById("completedMeta");
 const sleepMetaEl = document.getElementById("sleepMeta");
 const activitiesMetaEl = document.getElementById("activitiesMeta");
 const remainingMetaEl = document.getElementById("remainingMeta");
+const remainingBreakdownEl = document.getElementById("remainingBreakdown");
 
 const activityInputs = ACTIVITY_FIELDS.map((field) => ({
   ...field,
@@ -310,6 +311,14 @@ function renderGrid(model) {
   sleepMetaEl.textContent = `${formatWeeks(sleepWeeks)} expected spent sleeping`;
   activitiesMetaEl.textContent = `${formatWeeks(projectedActivityWeeks)} for non-screen activities`;
   remainingMetaEl.textContent = `${formatWeeks(remainingAwakeWeeks)} for screen time + remaining awake time`;
+
+  if (remainingBreakdownEl && remainingAwakeWeeks > 0) {
+    const phoneWeeks = model.segmentWeeks.phone ?? 0;
+    const freeWeeks = model.segmentWeeks.free ?? 0;
+    const phonePct = Math.round((phoneWeeks / remainingAwakeWeeks) * 100);
+    const freePct = 100 - phonePct;
+    remainingBreakdownEl.textContent = `${phonePct}% screen · ${freePct}% free`;
+  }
 
   for (let week = 0; week < model.livedWeeks; week += 1) {
     const box = document.createElement("div");
