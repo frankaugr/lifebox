@@ -8,6 +8,11 @@
   --lived: #979dad;
   --sleep: #1a1a1a;
   --phone: #0f62d6;
+  --eating: #db6a2d;
+  --hygiene: #00a97f;
+  --chores: #9c4fd9;
+  --commute: #d23d7b;
+  --errands: #f0a100;
   --free: #f3f4f8;
 
   --cell-size: 11px;
@@ -119,6 +124,13 @@ button:hover {
   color: #9f1326;
 }
 
+.info {
+  margin: 0.25rem 0 0;
+  min-height: 1.2rem;
+  font-size: 0.9rem;
+  color: #6a5932;
+}
+
 .summary {
   display: grid;
   gap: 0.5rem;
@@ -175,6 +187,26 @@ button:hover {
   background: var(--phone);
 }
 
+.swatch.eating {
+  background: var(--eating);
+}
+
+.swatch.hygiene {
+  background: var(--hygiene);
+}
+
+.swatch.chores {
+  background: var(--chores);
+}
+
+.swatch.commute {
+  background: var(--commute);
+}
+
+.swatch.errands {
+  background: var(--errands);
+}
+
 .swatch.free {
   background: var(--free);
 }
@@ -209,6 +241,31 @@ button:hover {
 .week.phone {
   background: var(--phone);
   border-color: #0b50af;
+}
+
+.week.eating {
+  background: var(--eating);
+  border-color: #b45524;
+}
+
+.week.hygiene {
+  background: var(--hygiene);
+  border-color: #008e6b;
+}
+
+.week.chores {
+  background: var(--chores);
+  border-color: #8340b9;
+}
+
+.week.commute {
+  background: var(--commute);
+  border-color: #b53168;
+}
+
+.week.errands {
+  background: var(--errands);
+  border-color: #cf8d00;
 }
 
 @media (max-width: 680px) {

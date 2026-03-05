@@ -5,14 +5,26 @@ A static web MVP for visualizing life in weeks.
 ## What it does
 - Takes user input for:
   - current age
-  - average daily screen time
   - life expectancy (default 80 years)
+  - average daily screen time
+  - eating + meal prep hours/day
+  - hygiene + bathroom hours/day
+  - household chores/admin hours/day
+  - commuting/transport hours/day
+  - errands/shopping hours/day
 - Renders one box per week of life expectancy.
 - Colors boxes as:
   - grey: weeks already lived
   - black: projected future sleep time (age-based sleep model)
   - blue: projected future phone time (from screen-time input)
+  - orange: projected eating + meal prep
+  - green: projected hygiene + bathroom
+  - violet: projected chores/admin
+  - pink: projected commuting/transport
+  - amber: projected errands/shopping
   - light: other future time
+- If the daily activity totals exceed awake time, the model proportionally reduces all awake
+  categories and shows a notice.
 
 ## Run locally
 Because this is a static site, you can open `index.html` directly in a browser.

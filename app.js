@@ -10,13 +10,69 @@ const SLEEP_RATES = [
   { min: 65, max: 130, hoursPerDay: 7 }
 ];
 
+const ACTIVITY_FIELDS = [
+  {
+    inputId: "screenTime",
+    key: "phone",
+    cssClass: "phone",
+    inputLabel: "screen time",
+    summaryLabel: "Projected future phone time",
+    titleLabel: "projected phone time"
+  },
+  {
+    inputId: "eatingTime",
+    key: "eating",
+    cssClass: "eating",
+    inputLabel: "eating + meal prep",
+    summaryLabel: "Projected future eating + meal prep",
+    titleLabel: "projected eating + meal prep"
+  },
+  {
+    inputId: "hygieneTime",
+    key: "hygiene",
+    cssClass: "hygiene",
+    inputLabel: "hygiene + bathroom",
+    summaryLabel: "Projected future hygiene + bathroom",
+    titleLabel: "projected hygiene + bathroom"
+  },
+  {
+    inputId: "choresTime",
+    key: "chores",
+    cssClass: "chores",
+    inputLabel: "household chores/admin",
+    summaryLabel: "Projected future chores + admin",
+    titleLabel: "projected chores + admin"
+  },
+  {
+    inputId: "commuteTime",
+    key: "commute",
+    cssClass: "commute",
+    inputLabel: "commuting/transport",
+    summaryLabel: "Projected future commuting + transport",
+    titleLabel: "projected commuting + transport"
+  },
+  {
+    inputId: "errandsTime",
+    key: "errands",
+    cssClass: "errands",
+    inputLabel: "errands/shopping",
+    summaryLabel: "Projected future errands + shopping",
+    titleLabel: "projected errands + shopping"
+  }
+];
+
 const controls = document.getElementById("controls");
 const ageInput = document.getElementById("age");
-const screenTimeInput = document.getElementById("screenTime");
 const lifeExpectancyInput = document.getElementById("lifeExpectancy");
 const validationMessage = document.getElementById("validationMessage");
+const infoMessage = document.getElementById("infoMessage");
 const summaryEl = document.getElementById("summary");
 const gridEl = document.getElementById("weeksGrid");
+
+const activityInputs = ACTIVITY_FIELDS.map((field) => ({
+  ...field,
+  element: document.getElementById(field.inputId)
+}));
 
 function getSleepHoursForAge(ageYears) {
   return (
@@ -33,17 +89,56 @@ function formatYears(weeks) {
   return `${(weeks / WEEKS_PER_YEAR).toFixed(1)} years`;
 }
 
+function allocateRoundedWeeks(totalWeeks, floatWeeksByKey) {
+  const allocations = Object.fromEntries(Object.keys(floatWeeksByKey).map((key) => [key, 0]));
+  const entries = Object.entries(floatWeeksByKey).map(([key, weeksFloat]) => {
+    const safeFloat = Number.isFinite(weeksFloat) ? Math.max(0, weeksFloat) : 0;
+    const floorWeeks = Math.floor(safeFloat);
+
+    allocations[key] = floorWeeks;
+    return {
+      key,
+      floorWeeks,
+      remainder: safeFloat - floorWeeks
+    };
+  });
+
+  let assigned = entries.reduce((sum, entry) => sum + entry.floorWeeks, 0);
+  let delta = totalWeeks - assigned;
+
+  if (delta > 0) {
+    const byRemainderDesc = [...entries].sort((a, b) => b.remainder - a.remainder);
+    let index = 0;
+    while (delta > 0 && byRemainderDesc.length > 0) {
+      const entry = byRemainderDesc[index % byRemainderDesc.length];
+      allocations[entry.key] += 1;
+      delta -= 1;
+      index += 1;
+    }
+  }
+
+  if (delta < 0) {
+    const byRemainderAsc = [...entries].sort((a, b) => a.remainder - b.remainder);
+    let index = 0;
+    while (delta < 0 && byRemainderAsc.length > 0) {
+      const entry = byRemainderAsc[index % byRemainderAsc.length];
+      if (allocations[entry.key] > 0) {
+        allocations[entry.key] -= 1;
+        delta += 1;
+      }
+      index += 1;
+    }
+  }
+
+  return allocations;
+}
+
 function parseInputs() {
   const age = Number.parseFloat(ageInput.value);
-  const screenTime = Number.parseFloat(screenTimeInput.value);
   const lifeExpectancy = Number.parseFloat(lifeExpectancyInput.value);
 
   if (!Number.isFinite(age) || age < 0 || age > 120) {
     return { error: "Enter an age between 0 and 120." };
-  }
-
-  if (!Number.isFinite(screenTime) || screenTime < 0 || screenTime > 24) {
-    return { error: "Enter daily screen time between 0 and 24 hours." };
   }
 
   if (!Number.isFinite(lifeExpectancy) || lifeExpectancy <= 0 || lifeExpectancy > 120) {
@@ -54,41 +149,99 @@ function parseInputs() {
     return { error: "Age cannot be greater than life expectancy." };
   }
 
-  return { age, screenTime, lifeExpectancy };
+  const activityHours = {};
+
+  for (const field of activityInputs) {
+    const value = Number.parseFloat(field.element.value);
+    if (!Number.isFinite(value) || value < 0 || value > 24) {
+      return {
+        error: `Enter ${field.inputLabel} between 0 and 24 hours per day.`
+      };
+    }
+
+    activityHours[field.key] = value;
+  }
+
+  return { age, lifeExpectancy, activityHours };
 }
 
-function calculateModel({ age, screenTime, lifeExpectancy }) {
+function calculateModel({ age, lifeExpectancy, activityHours }) {
   const totalWeeks = Math.round(lifeExpectancy * WEEKS_PER_YEAR);
   const livedWeeks = Math.round(age * WEEKS_PER_YEAR);
   const futureWeeks = Math.max(0, totalWeeks - livedWeeks);
 
-  let futureSleepWeeksFloat = 0;
-  let futurePhoneWeeksFloat = 0;
+  let dailyClampedWeeks = 0;
+
+  const futureFloatWeeks = {
+    sleep: 0,
+    phone: 0,
+    eating: 0,
+    hygiene: 0,
+    chores: 0,
+    commute: 0,
+    errands: 0,
+    free: 0
+  };
 
   for (let week = 0; week < futureWeeks; week += 1) {
     const ageThisWeek = age + week / WEEKS_PER_YEAR;
     const sleepHoursPerDay = getSleepHoursForAge(ageThisWeek);
-    const availableAwakeHours = Math.max(0, 24 - sleepHoursPerDay);
-    const clampedScreenTime = Math.min(screenTime, availableAwakeHours);
+    const awakeHoursPerDay = Math.max(0, 24 - sleepHoursPerDay);
 
-    futureSleepWeeksFloat += sleepHoursPerDay / 24;
-    futurePhoneWeeksFloat += clampedScreenTime / 24;
+    const requestedAwakeHours = activityInputs.reduce(
+      (sum, field) => sum + activityHours[field.key],
+      0
+    );
+
+    const clampScale = requestedAwakeHours > awakeHoursPerDay ? awakeHoursPerDay / requestedAwakeHours : 1;
+
+    if (clampScale < 1) {
+      dailyClampedWeeks += 1;
+    }
+
+    futureFloatWeeks.sleep += sleepHoursPerDay / 24;
+
+    for (const field of activityInputs) {
+      futureFloatWeeks[field.key] += (activityHours[field.key] * clampScale) / 24;
+    }
+
+    const usedAwakeHours = requestedAwakeHours * clampScale;
+    futureFloatWeeks.free += Math.max(0, awakeHoursPerDay - usedAwakeHours) / 24;
   }
 
-  const sleepWeeks = Math.min(futureWeeks, Math.round(futureSleepWeeksFloat));
-  const phoneWeeks = Math.min(futureWeeks - sleepWeeks, Math.round(futurePhoneWeeksFloat));
-  const freeWeeks = Math.max(0, futureWeeks - sleepWeeks - phoneWeeks);
+  const roundedWeeks = allocateRoundedWeeks(futureWeeks, futureFloatWeeks);
 
-  const lifetimePhoneWeeks = Math.round(totalWeeks * (screenTime / 24));
+  const futureSegments = [
+    {
+      key: "sleep",
+      cssClass: "sleep",
+      titleLabel: "projected sleep",
+      weeks: roundedWeeks.sleep
+    },
+    ...activityInputs.map((field) => ({
+      key: field.key,
+      cssClass: field.cssClass,
+      titleLabel: field.titleLabel,
+      weeks: roundedWeeks[field.key]
+    })),
+    {
+      key: "free",
+      cssClass: "free",
+      titleLabel: "other future time",
+      weeks: roundedWeeks.free
+    }
+  ];
+
+  const lifetimePhoneWeeks = Math.round(totalWeeks * (activityHours.phone / 24));
 
   return {
     totalWeeks,
     livedWeeks,
     futureWeeks,
-    sleepWeeks,
-    phoneWeeks,
-    freeWeeks,
-    lifetimePhoneWeeks
+    futureSegments,
+    segmentWeeks: roundedWeeks,
+    lifetimePhoneWeeks,
+    dailyClampedWeeks
   };
 }
 
@@ -97,13 +250,16 @@ function renderSummary(model) {
     { label: "Weeks lived", value: `${formatWeeks(model.livedWeeks)} (${formatYears(model.livedWeeks)})` },
     {
       label: "Projected future sleep",
-      value: `${formatWeeks(model.sleepWeeks)} (${formatYears(model.sleepWeeks)})`
+      value: `${formatWeeks(model.segmentWeeks.sleep)} (${formatYears(model.segmentWeeks.sleep)})`
     },
+    ...activityInputs.map((field) => ({
+      label: field.summaryLabel,
+      value: `${formatWeeks(model.segmentWeeks[field.key])} (${formatYears(model.segmentWeeks[field.key])})`
+    })),
     {
-      label: "Projected future phone time",
-      value: `${formatWeeks(model.phoneWeeks)} (${formatYears(model.phoneWeeks)})`
+      label: "Other future time",
+      value: `${formatWeeks(model.segmentWeeks.free)} (${formatYears(model.segmentWeeks.free)})`
     },
-    { label: "Other future time", value: `${formatWeeks(model.freeWeeks)} (${formatYears(model.freeWeeks)})` },
     {
       label: "Phone time over full life (at current average)",
       value: `${formatWeeks(model.lifetimePhoneWeeks)} (${formatYears(model.lifetimePhoneWeeks)})`
@@ -124,32 +280,37 @@ function renderSummary(model) {
 
 function renderGrid(model) {
   const fragment = document.createDocumentFragment();
+  let weekNumber = 1;
 
-  const livedCutoff = model.livedWeeks;
-  const sleepCutoff = livedCutoff + model.sleepWeeks;
-  const phoneCutoff = sleepCutoff + model.phoneWeeks;
-
-  for (let weekIndex = 0; weekIndex < model.totalWeeks; weekIndex += 1) {
+  for (let week = 0; week < model.livedWeeks; week += 1) {
     const box = document.createElement("div");
-    box.className = "week";
-
-    if (weekIndex < livedCutoff) {
-      box.classList.add("lived");
-      box.title = `Week ${weekIndex + 1}: lived`;
-    } else if (weekIndex < sleepCutoff) {
-      box.classList.add("sleep");
-      box.title = `Week ${weekIndex + 1}: projected sleep`;
-    } else if (weekIndex < phoneCutoff) {
-      box.classList.add("phone");
-      box.title = `Week ${weekIndex + 1}: projected phone time`;
-    } else {
-      box.title = `Week ${weekIndex + 1}: other future time`;
-    }
-
+    box.className = "week lived";
+    box.title = `Week ${weekNumber}: lived`;
     fragment.appendChild(box);
+    weekNumber += 1;
+  }
+
+  for (const segment of model.futureSegments) {
+    for (let week = 0; week < segment.weeks; week += 1) {
+      const box = document.createElement("div");
+      box.className = `week ${segment.cssClass}`;
+      box.title = `Week ${weekNumber}: ${segment.titleLabel}`;
+      fragment.appendChild(box);
+      weekNumber += 1;
+    }
   }
 
   gridEl.replaceChildren(fragment);
+}
+
+function renderInfo(model) {
+  if (model.dailyClampedWeeks > 0) {
+    infoMessage.textContent =
+      "Some daily inputs exceed awake time and were proportionally reduced during projection.";
+    return;
+  }
+
+  infoMessage.textContent = "";
 }
 
 function updateVisualization() {
@@ -157,6 +318,7 @@ function updateVisualization() {
 
   if (parsed.error) {
     validationMessage.textContent = parsed.error;
+    infoMessage.textContent = "";
     return;
   }
 
@@ -165,6 +327,7 @@ function updateVisualization() {
   const model = calculateModel(parsed);
   renderSummary(model);
   renderGrid(model);
+  renderInfo(model);
 }
 
 controls.addEventListener("submit", (event) => {
@@ -172,7 +335,7 @@ controls.addEventListener("submit", (event) => {
   updateVisualization();
 });
 
-[ageInput, screenTimeInput, lifeExpectancyInput].forEach((input) => {
+[ageInput, lifeExpectancyInput, ...activityInputs.map((field) => field.element)].forEach((input) => {
   input.addEventListener("input", () => {
     updateVisualization();
   });

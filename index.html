@@ -16,8 +16,8 @@
         <p class="eyebrow">BoxLife MVP</p>
         <h1>Your life in weeks</h1>
         <p>
-          Enter your current age and average daily screen time. This web MVP uses manual input
-          only (mobile apps can later read device usage stats).
+          Enter your current age and daily averages. This web MVP uses manual input only (mobile
+          apps can later read device usage stats).
         </p>
       </header>
 
@@ -42,6 +42,71 @@
             />
           </label>
 
+          <label class="field" for="eatingTime">
+            <span>Eating + meal prep (hours/day)</span>
+            <input
+              id="eatingTime"
+              name="eatingTime"
+              type="number"
+              min="0"
+              max="24"
+              step="0.1"
+              value="1.5"
+            />
+          </label>
+
+          <label class="field" for="hygieneTime">
+            <span>Hygiene + bathroom (hours/day)</span>
+            <input
+              id="hygieneTime"
+              name="hygieneTime"
+              type="number"
+              min="0"
+              max="24"
+              step="0.1"
+              value="1"
+            />
+          </label>
+
+          <label class="field" for="choresTime">
+            <span>Household chores/admin (hours/day)</span>
+            <input
+              id="choresTime"
+              name="choresTime"
+              type="number"
+              min="0"
+              max="24"
+              step="0.1"
+              value="1"
+            />
+          </label>
+
+          <label class="field" for="commuteTime">
+            <span>Commuting/transport (hours/day)</span>
+            <input
+              id="commuteTime"
+              name="commuteTime"
+              type="number"
+              min="0"
+              max="24"
+              step="0.1"
+              value="0.7"
+            />
+          </label>
+
+          <label class="field" for="errandsTime">
+            <span>Errands/shopping (hours/day)</span>
+            <input
+              id="errandsTime"
+              name="errandsTime"
+              type="number"
+              min="0"
+              max="24"
+              step="0.1"
+              value="0.4"
+            />
+          </label>
+
           <label class="field" for="lifeExpectancy">
             <span>Life expectancy (years)</span>
             <input
@@ -58,6 +123,7 @@
           <button type="submit">Update visualisation</button>
         </form>
         <p id="validationMessage" class="validation" role="status" aria-live="polite"></p>
+        <p id="infoMessage" class="info" role="status" aria-live="polite"></p>
       </section>
 
       <section class="panel" aria-labelledby="summary-title">
@@ -71,6 +137,11 @@
           <div class="legend-item"><span class="swatch lived"></span>Lived</div>
           <div class="legend-item"><span class="swatch sleep"></span>Projected sleep</div>
           <div class="legend-item"><span class="swatch phone"></span>Projected phone use</div>
+          <div class="legend-item"><span class="swatch eating"></span>Projected eating + meal prep</div>
+          <div class="legend-item"><span class="swatch hygiene"></span>Projected hygiene + bathroom</div>
+          <div class="legend-item"><span class="swatch chores"></span>Projected chores/admin</div>
+          <div class="legend-item"><span class="swatch commute"></span>Projected commuting/transport</div>
+          <div class="legend-item"><span class="swatch errands"></span>Projected errands/shopping</div>
           <div class="legend-item"><span class="swatch free"></span>Other future time</div>
         </div>
       </section>
