@@ -69,15 +69,20 @@ const infoMessage = document.getElementById("infoMessage");
 const summaryEl = document.getElementById("summary");
 const completedGridEl = document.getElementById("completedWeeksGrid");
 const sleepGridEl = document.getElementById("sleepWeeksGrid");
+const activitiesGridEl = document.getElementById("activitiesWeeksGrid");
 const remainingGridEl = document.getElementById("remainingWeeksGrid");
 const completedMetaEl = document.getElementById("completedMeta");
 const sleepMetaEl = document.getElementById("sleepMeta");
+const activitiesMetaEl = document.getElementById("activitiesMeta");
 const remainingMetaEl = document.getElementById("remainingMeta");
 
 const activityInputs = ACTIVITY_FIELDS.map((field) => ({
   ...field,
   element: document.getElementById(field.inputId)
 }));
+
+const PROJECTED_ACTIVITY_KEYS = ["eating", "hygiene", "chores", "commute", "errands"];
+const REMAINING_AWAKE_KEYS = ["phone", "free"];
 
 function getSleepHoursForAge(ageYears) {
   return (
@@ -286,14 +291,24 @@ function renderSummary(model) {
 function renderGrid(model) {
   const completedFragment = document.createDocumentFragment();
   const sleepFragment = document.createDocumentFragment();
+  const activitiesFragment = document.createDocumentFragment();
   const remainingFragment = document.createDocumentFragment();
 
   const sleepWeeks = model.segmentWeeks.sleep;
-  const awakeFutureWeeks = Math.max(0, model.futureWeeks - sleepWeeks);
+  const projectedActivityWeeks = PROJECTED_ACTIVITY_KEYS.reduce(
+    (sum, key) => sum + (model.segmentWeeks[key] ?? 0),
+    0
+  );
+  const remainingAwakeWeeks = REMAINING_AWAKE_KEYS.reduce(
+    (sum, key) => sum + (model.segmentWeeks[key] ?? 0),
+    0
+  );
+  const futureSegmentsByKey = new Map(model.futureSegments.map((segment) => [segment.key, segment]));
 
   completedMetaEl.textContent = `${formatWeeks(model.livedWeeks)} already lived`;
   sleepMetaEl.textContent = `${formatWeeks(sleepWeeks)} expected spent sleeping`;
-  remainingMetaEl.textContent = `${formatWeeks(awakeFutureWeeks)} expected awake time`;
+  activitiesMetaEl.textContent = `${formatWeeks(projectedActivityWeeks)} for non-screen activities`;
+  remainingMetaEl.textContent = `${formatWeeks(remainingAwakeWeeks)} for screen time + remaining awake time`;
 
   for (let week = 0; week < model.livedWeeks; week += 1) {
     const box = document.createElement("div");
@@ -309,7 +324,26 @@ function renderGrid(model) {
     sleepFragment.appendChild(box);
   }
 
-  for (const segment of model.futureSegments.filter((entry) => entry.key !== "sleep")) {
+  for (const key of PROJECTED_ACTIVITY_KEYS) {
+    const segment = futureSegmentsByKey.get(key);
+    if (!segment) {
+      continue;
+    }
+
+    for (let week = 0; week < segment.weeks; week += 1) {
+      const box = document.createElement("div");
+      box.className = `week ${segment.cssClass}`;
+      box.title = segment.titleLabel;
+      activitiesFragment.appendChild(box);
+    }
+  }
+
+  for (const key of REMAINING_AWAKE_KEYS) {
+    const segment = futureSegmentsByKey.get(key);
+    if (!segment) {
+      continue;
+    }
+
     for (let week = 0; week < segment.weeks; week += 1) {
       const box = document.createElement("div");
       box.className = `week ${segment.cssClass}`;
@@ -320,6 +354,7 @@ function renderGrid(model) {
 
   completedGridEl.replaceChildren(completedFragment);
   sleepGridEl.replaceChildren(sleepFragment);
+  activitiesGridEl.replaceChildren(activitiesFragment);
   remainingGridEl.replaceChildren(remainingFragment);
 }
 

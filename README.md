@@ -16,7 +16,8 @@ A static web MVP for visualizing life in weeks.
 - Separates the calendar into:
   - completed weeks
   - projected sleep weeks
-  - remaining awake weeks
+  - projected non-screen activity weeks
+  - remaining awake weeks (including screen time)
 - Colors boxes as:
   - grey: weeks already lived
   - black: projected future sleep time (age-based sleep model)

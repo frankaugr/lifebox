@@ -15,7 +15,7 @@
   --errands: #f2c100;
   --free: #eef2f8;
 
-  --cell-size: 11px;
+  --cell-size: 9px;
   --cell-gap: 2px;
 }
 
@@ -212,16 +212,20 @@ button:hover {
 }
 
 .grid-sections {
-  display: grid;
-  gap: 0.9rem;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  display: block;
 }
 
 .grid-section {
-  border: 1px dashed #cdd4e2;
-  border-radius: 10px;
-  padding: 0.7rem;
-  background: #fbfcff;
+  margin: 0 0 1.25rem;
+  padding: 0;
+}
+
+.grid-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-break {
+  margin-top: 1.6rem;
 }
 
 .grid-section h3 {
@@ -240,8 +244,6 @@ button:hover {
   grid-template-columns: repeat(52, var(--cell-size));
   gap: var(--cell-gap);
   justify-content: start;
-  overflow-x: auto;
-  padding-bottom: 0.2rem;
 }
 
 .week {
@@ -299,7 +301,7 @@ button:hover {
 
 @media (max-width: 680px) {
   :root {
-    --cell-size: 8px;
+    --cell-size: 6px;
     --cell-gap: 1px;
   }
 
@@ -315,5 +317,11 @@ button:hover {
   .panel {
     border-radius: 12px;
     padding: 0.8rem;
+  }
+}
+
+@media (max-width: 430px) {
+  :root {
+    --cell-size: 5px;
   }
 }
