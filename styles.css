@@ -13,10 +13,11 @@
   --hygiene: #2a7462;
   --chores: #58409a;
   --commute: #903a48;
+  --work: #4d6a88;
   --errands: #8f8028;
   --free: #1c2438;
 
-  --cell-size: 9px;
+  --cell-size: 13px;
   --cell-gap: 2px;
 
   color-scheme: dark;
@@ -272,6 +273,10 @@ button:active {
   background: var(--commute);
 }
 
+.swatch.work {
+  background: var(--work);
+}
+
 .swatch.errands {
   background: var(--errands);
 }
@@ -375,6 +380,11 @@ button:active {
   border-color: rgba(144, 58, 72, 0.35);
 }
 
+.week.work {
+  background: var(--work);
+  border-color: rgba(77, 106, 136, 0.35);
+}
+
 .week.errands {
   background: var(--errands);
   border-color: rgba(143, 128, 40, 0.35);
@@ -383,6 +393,39 @@ button:active {
 .week.free {
   background: var(--free);
   border-color: rgba(255, 255, 255, 0.03);
+}
+
+/* ——— Sources ——— */
+
+.sources {
+  padding: 0.4rem 0 0;
+  border-top: 1px solid #131620;
+}
+
+.sources-heading {
+  margin: 0 0 0.15rem;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #363c52;
+  font-weight: 600;
+}
+
+.sources p {
+  margin: 0;
+  font-size: 0.68rem;
+  color: #2e3448;
+  line-height: 1.5;
+}
+
+.sources a {
+  color: #354060;
+  text-decoration: none;
+}
+
+.sources a:hover {
+  color: #455278;
+  text-decoration: underline;
 }
 
 /* ——— Footer ——— */

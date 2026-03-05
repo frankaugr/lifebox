@@ -20,6 +20,14 @@ const ACTIVITY_FIELDS = [
     titleLabel: "projected phone time"
   },
   {
+    inputId: "workTime",
+    key: "work",
+    cssClass: "work",
+    inputLabel: "work",
+    summaryLabel: "Projected future work",
+    titleLabel: "projected work"
+  },
+  {
     inputId: "eatingTime",
     key: "eating",
     cssClass: "eating",
@@ -65,14 +73,15 @@ const controls = document.getElementById("controls");
 const ageInput = document.getElementById("age");
 const lifeExpectancyInput = document.getElementById("lifeExpectancy");
 const validationMessage = document.getElementById("validationMessage");
-const infoMessage = document.getElementById("infoMessage");
 const summaryEl = document.getElementById("summary");
 const completedGridEl = document.getElementById("completedWeeksGrid");
 const sleepGridEl = document.getElementById("sleepWeeksGrid");
+const workGridEl = document.getElementById("workWeeksGrid");
 const activitiesGridEl = document.getElementById("activitiesWeeksGrid");
 const remainingGridEl = document.getElementById("remainingWeeksGrid");
 const completedMetaEl = document.getElementById("completedMeta");
 const sleepMetaEl = document.getElementById("sleepMeta");
+const workMetaEl = document.getElementById("workMeta");
 const activitiesMetaEl = document.getElementById("activitiesMeta");
 const remainingMetaEl = document.getElementById("remainingMeta");
 const remainingBreakdownEl = document.getElementById("remainingBreakdown");
@@ -84,6 +93,11 @@ const activityInputs = ACTIVITY_FIELDS.map((field) => ({
 
 const PROJECTED_ACTIVITY_KEYS = ["eating", "hygiene", "chores", "commute", "errands"];
 const REMAINING_AWAKE_KEYS = ["phone", "free"];
+
+function getWorkScaleForAge(ageYears) {
+  if (ageYears < 18 || ageYears >= 65) return 0;
+  return 1;
+}
 
 function getSleepHoursForAge(ageYears) {
   return (
@@ -186,6 +200,7 @@ function calculateModel({ age, lifeExpectancy, activityHours }) {
   const futureFloatWeeks = {
     sleep: 0,
     phone: 0,
+    work: 0,
     eating: 0,
     hygiene: 0,
     chores: 0,
@@ -199,8 +214,13 @@ function calculateModel({ age, lifeExpectancy, activityHours }) {
     const sleepHoursPerDay = getSleepHoursForAge(ageThisWeek);
     const awakeHoursPerDay = Math.max(0, 24 - sleepHoursPerDay);
 
+    const workScale = getWorkScaleForAge(ageThisWeek);
+
     const requestedAwakeHours = activityInputs.reduce(
-      (sum, field) => sum + activityHours[field.key],
+      (sum, field) => {
+        const hours = field.key === "work" ? activityHours[field.key] * workScale : activityHours[field.key];
+        return sum + hours;
+      },
       0
     );
 
@@ -213,7 +233,8 @@ function calculateModel({ age, lifeExpectancy, activityHours }) {
     futureFloatWeeks.sleep += sleepHoursPerDay / 24;
 
     for (const field of activityInputs) {
-      futureFloatWeeks[field.key] += (activityHours[field.key] * clampScale) / 24;
+      const hours = field.key === "work" ? activityHours[field.key] * workScale : activityHours[field.key];
+      futureFloatWeeks[field.key] += (hours * clampScale) / 24;
     }
 
     const usedAwakeHours = requestedAwakeHours * clampScale;
@@ -293,10 +314,12 @@ function renderSummary(model) {
 function renderGrid(model) {
   const completedFragment = document.createDocumentFragment();
   const sleepFragment = document.createDocumentFragment();
+  const workFragment = document.createDocumentFragment();
   const activitiesFragment = document.createDocumentFragment();
   const remainingFragment = document.createDocumentFragment();
 
   const sleepWeeks = model.segmentWeeks.sleep;
+  const workWeeks = model.segmentWeeks.work ?? 0;
   const projectedActivityWeeks = PROJECTED_ACTIVITY_KEYS.reduce(
     (sum, key) => sum + (model.segmentWeeks[key] ?? 0),
     0
@@ -307,10 +330,11 @@ function renderGrid(model) {
   );
   const futureSegmentsByKey = new Map(model.futureSegments.map((segment) => [segment.key, segment]));
 
-  completedMetaEl.textContent = `${formatWeeks(model.livedWeeks)} already lived`;
-  sleepMetaEl.textContent = `${formatWeeks(sleepWeeks)} expected spent sleeping`;
-  activitiesMetaEl.textContent = `${formatWeeks(projectedActivityWeeks)} for non-screen activities`;
-  remainingMetaEl.textContent = `${formatWeeks(remainingAwakeWeeks)} for screen time + remaining awake time`;
+  completedMetaEl.textContent = formatWeeks(model.livedWeeks);
+  sleepMetaEl.textContent = formatWeeks(sleepWeeks);
+  workMetaEl.textContent = formatWeeks(workWeeks);
+  activitiesMetaEl.textContent = formatWeeks(projectedActivityWeeks);
+  remainingMetaEl.textContent = formatWeeks(remainingAwakeWeeks);
 
   if (remainingBreakdownEl && remainingAwakeWeeks > 0) {
     const phoneWeeks = model.segmentWeeks.phone ?? 0;
@@ -332,6 +356,13 @@ function renderGrid(model) {
     box.className = "week sleep";
     box.title = `Projected sleep week ${week + 1}`;
     sleepFragment.appendChild(box);
+  }
+
+  for (let week = 0; week < workWeeks; week += 1) {
+    const box = document.createElement("div");
+    box.className = "week work";
+    box.title = `Projected work week ${week + 1}`;
+    workFragment.appendChild(box);
   }
 
   for (const key of PROJECTED_ACTIVITY_KEYS) {
@@ -364,18 +395,9 @@ function renderGrid(model) {
 
   completedGridEl.replaceChildren(completedFragment);
   sleepGridEl.replaceChildren(sleepFragment);
+  workGridEl.replaceChildren(workFragment);
   activitiesGridEl.replaceChildren(activitiesFragment);
   remainingGridEl.replaceChildren(remainingFragment);
-}
-
-function renderInfo(model) {
-  if (model.dailyClampedWeeks > 0) {
-    infoMessage.textContent =
-      "Some daily inputs exceed awake time and were proportionally reduced during projection.";
-    return;
-  }
-
-  infoMessage.textContent = "";
 }
 
 function updateVisualization() {
@@ -383,7 +405,6 @@ function updateVisualization() {
 
   if (parsed.error) {
     validationMessage.textContent = parsed.error;
-    infoMessage.textContent = "";
     return;
   }
 
@@ -392,7 +413,6 @@ function updateVisualization() {
   const model = calculateModel(parsed);
   renderSummary(model);
   renderGrid(model);
-  renderInfo(model);
 }
 
 controls.addEventListener("submit", (event) => {
