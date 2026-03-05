@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BoxLife MVP</title>
+    <meta
+      name="description"
+      content="A life-in-weeks visualization showing time already lived, projected sleep, and projected phone use."
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="hero">
+        <p class="eyebrow">BoxLife MVP</p>
+        <h1>Your life in weeks</h1>
+        <p>
+          Enter your current age and average daily screen time. This web MVP uses manual input
+          only (mobile apps can later read device usage stats).
+        </p>
+      </header>
+
+      <section class="panel" aria-labelledby="inputs-title">
+        <h2 id="inputs-title">Inputs</h2>
+        <form id="controls" class="controls" novalidate>
+          <label class="field" for="age">
+            <span>Current age (years)</span>
+            <input id="age" name="age" type="number" min="0" max="120" step="0.1" value="30" />
+          </label>
+
+          <label class="field" for="screenTime">
+            <span>Screen time per day (hours)</span>
+            <input
+              id="screenTime"
+              name="screenTime"
+              type="number"
+              min="0"
+              max="24"
+              step="0.1"
+              value="4"
+            />
+          </label>
+
+          <label class="field" for="lifeExpectancy">
+            <span>Life expectancy (years)</span>
+            <input
+              id="lifeExpectancy"
+              name="lifeExpectancy"
+              type="number"
+              min="1"
+              max="120"
+              step="0.1"
+              value="80"
+            />
+          </label>
+
+          <button type="submit">Update visualisation</button>
+        </form>
+        <p id="validationMessage" class="validation" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="panel" aria-labelledby="summary-title">
+        <h2 id="summary-title">Summary</h2>
+        <div id="summary" class="summary" aria-live="polite"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="legend-title">
+        <h2 id="legend-title">Legend</h2>
+        <div class="legend">
+          <div class="legend-item"><span class="swatch lived"></span>Lived</div>
+          <div class="legend-item"><span class="swatch sleep"></span>Projected sleep</div>
+          <div class="legend-item"><span class="swatch phone"></span>Projected phone use</div>
+          <div class="legend-item"><span class="swatch free"></span>Other future time</div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="grid-title">
+        <h2 id="grid-title">Life calendar (1 box = 1 week)</h2>
+        <div id="weeksGrid" class="weeks-grid" aria-label="Life in weeks grid"></div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

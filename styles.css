@@ -1,0 +1,233 @@
+:root {
+  --bg: #f6f7fb;
+  --text: #171717;
+  --muted: #5f6472;
+  --surface: #ffffff;
+  --border: #dadde7;
+
+  --lived: #979dad;
+  --sleep: #1a1a1a;
+  --phone: #0f62d6;
+  --free: #f3f4f8;
+
+  --cell-size: 11px;
+  --cell-gap: 2px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 15% 15%, #e9efff 0, transparent 42%),
+    radial-gradient(circle at 85% 0%, #f9efe3 0, transparent 38%),
+    var(--bg);
+}
+
+.app {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 2rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.hero {
+  background: linear-gradient(130deg, #151823, #2a3043);
+  color: #ffffff;
+  border-radius: 16px;
+  padding: 1rem 1rem 1.2rem;
+  box-shadow: 0 16px 38px rgba(15, 21, 36, 0.25);
+}
+
+.hero h1 {
+  margin: 0.25rem 0;
+  font-size: clamp(1.5rem, 4.5vw, 2.4rem);
+}
+
+.hero p {
+  margin: 0;
+  max-width: 70ch;
+  color: #d7deee;
+}
+
+.eyebrow {
+  margin: 0;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  color: #9bb0ff;
+}
+
+.panel {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 0.9rem;
+}
+
+.panel h2 {
+  margin: 0 0 0.8rem;
+  font-size: 1rem;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.8rem;
+  align-items: end;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.field input {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #b8c0d2;
+  padding: 0.55rem 0.65rem;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+button {
+  border: 0;
+  border-radius: 10px;
+  padding: 0.62rem 0.8rem;
+  background: #111827;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #202938;
+}
+
+.validation {
+  margin: 0.5rem 0 0;
+  min-height: 1.2rem;
+  font-size: 0.9rem;
+  color: #9f1326;
+}
+
+.summary {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.stat {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
+  background: #fbfcff;
+}
+
+.stat .label {
+  color: var(--muted);
+  font-size: 0.83rem;
+}
+
+.stat .value {
+  margin-top: 0.2rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+}
+
+.swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid #b5b9c4;
+}
+
+.swatch.lived {
+  background: var(--lived);
+}
+
+.swatch.sleep {
+  background: var(--sleep);
+}
+
+.swatch.phone {
+  background: var(--phone);
+}
+
+.swatch.free {
+  background: var(--free);
+}
+
+.weeks-grid {
+  display: grid;
+  grid-template-columns: repeat(52, var(--cell-size));
+  gap: var(--cell-gap);
+  justify-content: start;
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+}
+
+.week {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  border: 1px solid #d8dbe4;
+  border-radius: 2px;
+  background: var(--free);
+}
+
+.week.lived {
+  background: var(--lived);
+  border-color: #8b90a0;
+}
+
+.week.sleep {
+  background: var(--sleep);
+  border-color: #1a1a1a;
+}
+
+.week.phone {
+  background: var(--phone);
+  border-color: #0b50af;
+}
+
+@media (max-width: 680px) {
+  :root {
+    --cell-size: 8px;
+    --cell-gap: 1px;
+  }
+
+  .app {
+    padding: 1rem 0.7rem 1.5rem;
+  }
+
+  .hero {
+    border-radius: 12px;
+    padding: 0.9rem;
+  }
+
+  .panel {
+    border-radius: 12px;
+    padding: 0.8rem;
+  }
+}
