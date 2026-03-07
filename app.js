@@ -1,3 +1,7 @@
+/* ═══════════════════════════════════════
+   Constants & Model
+   ═══════════════════════════════════════ */
+
 const WEEKS_PER_YEAR = 52;
 
 const SLEEP_RATES = [
@@ -69,30 +73,41 @@ const ACTIVITY_FIELDS = [
   }
 ];
 
-const controls = document.getElementById("controls");
+const PROJECTED_ACTIVITY_KEYS = ["eating", "hygiene", "chores", "commute", "errands"];
+const REMAINING_AWAKE_KEYS = ["phone", "free"];
+const ACTIVITIES_SUBCATEGORIES = ["eating", "hygiene", "chores", "commute", "errands"];
+const EXTRACTION_ORDER = ["sleep", "work", "activities"];
+
+/* ═══════════════════════════════════════
+   DOM References
+   ═══════════════════════════════════════ */
+
 const ageInput = document.getElementById("age");
 const lifeExpectancyInput = document.getElementById("lifeExpectancy");
 const validationMessage = document.getElementById("validationMessage");
-const summaryEl = document.getElementById("summary");
+
 const completedGridEl = document.getElementById("completedWeeksGrid");
+const unifiedGridEl = document.getElementById("unifiedWeeksGrid");
 const sleepGridEl = document.getElementById("sleepWeeksGrid");
 const workGridEl = document.getElementById("workWeeksGrid");
 const activitiesGridEl = document.getElementById("activitiesWeeksGrid");
-const remainingGridEl = document.getElementById("remainingWeeksGrid");
 const completedMetaEl = document.getElementById("completedMeta");
+const unifiedMetaEl = document.getElementById("unifiedMeta");
+const whatsLeftGridEl = document.getElementById("whatsLeftGrid");
+const whatsLeftMetaEl = document.getElementById("whatsLeftMeta");
+const whatsLeftBreakdownEl = document.getElementById("whatsLeftBreakdown");
 const sleepMetaEl = document.getElementById("sleepMeta");
 const workMetaEl = document.getElementById("workMeta");
 const activitiesMetaEl = document.getElementById("activitiesMeta");
-const remainingMetaEl = document.getElementById("remainingMeta");
-const remainingBreakdownEl = document.getElementById("remainingBreakdown");
 
 const activityInputs = ACTIVITY_FIELDS.map((field) => ({
   ...field,
   element: document.getElementById(field.inputId)
 }));
 
-const PROJECTED_ACTIVITY_KEYS = ["eating", "hygiene", "chores", "commute", "errands"];
-const REMAINING_AWAKE_KEYS = ["phone", "free"];
+/* ═══════════════════════════════════════
+   Model Functions
+   ═══════════════════════════════════════ */
 
 function getWorkScaleForAge(ageYears) {
   if (ageYears < 18 || ageYears >= 65) return 0;
@@ -110,48 +125,37 @@ function formatWeeks(weeks) {
   return `${weeks.toLocaleString()} weeks`;
 }
 
-function formatYears(weeks) {
-  return `${(weeks / WEEKS_PER_YEAR).toFixed(1)} years`;
-}
-
 function allocateRoundedWeeks(totalWeeks, floatWeeksByKey) {
   const allocations = Object.fromEntries(Object.keys(floatWeeksByKey).map((key) => [key, 0]));
   const entries = Object.entries(floatWeeksByKey).map(([key, weeksFloat]) => {
     const safeFloat = Number.isFinite(weeksFloat) ? Math.max(0, weeksFloat) : 0;
     const floorWeeks = Math.floor(safeFloat);
-
     allocations[key] = floorWeeks;
-    return {
-      key,
-      floorWeeks,
-      remainder: safeFloat - floorWeeks
-    };
+    return { key, floorWeeks, remainder: safeFloat - floorWeeks };
   });
 
   let assigned = entries.reduce((sum, entry) => sum + entry.floorWeeks, 0);
   let delta = totalWeeks - assigned;
 
   if (delta > 0) {
-    const byRemainderDesc = [...entries].sort((a, b) => b.remainder - a.remainder);
-    let index = 0;
-    while (delta > 0 && byRemainderDesc.length > 0) {
-      const entry = byRemainderDesc[index % byRemainderDesc.length];
-      allocations[entry.key] += 1;
+    const sorted = [...entries].sort((a, b) => b.remainder - a.remainder);
+    let i = 0;
+    while (delta > 0) {
+      allocations[sorted[i % sorted.length].key] += 1;
       delta -= 1;
-      index += 1;
+      i += 1;
     }
   }
 
   if (delta < 0) {
-    const byRemainderAsc = [...entries].sort((a, b) => a.remainder - b.remainder);
-    let index = 0;
-    while (delta < 0 && byRemainderAsc.length > 0) {
-      const entry = byRemainderAsc[index % byRemainderAsc.length];
-      if (allocations[entry.key] > 0) {
-        allocations[entry.key] -= 1;
+    const sorted = [...entries].sort((a, b) => a.remainder - b.remainder);
+    let i = 0;
+    while (delta < 0) {
+      if (allocations[sorted[i % sorted.length].key] > 0) {
+        allocations[sorted[i % sorted.length].key] -= 1;
         delta += 1;
       }
-      index += 1;
+      i += 1;
     }
   }
 
@@ -165,25 +169,19 @@ function parseInputs() {
   if (!Number.isFinite(age) || age < 0 || age > 120) {
     return { error: "Enter an age between 0 and 120." };
   }
-
   if (!Number.isFinite(lifeExpectancy) || lifeExpectancy <= 0 || lifeExpectancy > 120) {
     return { error: "Enter life expectancy between 1 and 120 years." };
   }
-
   if (age > lifeExpectancy) {
     return { error: "Age cannot be greater than life expectancy." };
   }
 
   const activityHours = {};
-
   for (const field of activityInputs) {
     const value = Number.parseFloat(field.element.value);
     if (!Number.isFinite(value) || value < 0 || value > 24) {
-      return {
-        error: `Enter ${field.inputLabel} between 0 and 24 hours per day.`
-      };
+      return { error: `Enter ${field.inputLabel} between 0 and 24 hours per day.` };
     }
-
     activityHours[field.key] = value;
   }
 
@@ -195,40 +193,25 @@ function calculateModel({ age, lifeExpectancy, activityHours }) {
   const livedWeeks = Math.round(age * WEEKS_PER_YEAR);
   const futureWeeks = Math.max(0, totalWeeks - livedWeeks);
 
-  let dailyClampedWeeks = 0;
-
   const futureFloatWeeks = {
-    sleep: 0,
-    phone: 0,
-    work: 0,
-    eating: 0,
-    hygiene: 0,
-    chores: 0,
-    commute: 0,
-    errands: 0,
-    free: 0
+    sleep: 0, phone: 0, work: 0,
+    eating: 0, hygiene: 0, chores: 0,
+    commute: 0, errands: 0, free: 0
   };
 
   for (let week = 0; week < futureWeeks; week += 1) {
     const ageThisWeek = age + week / WEEKS_PER_YEAR;
     const sleepHoursPerDay = getSleepHoursForAge(ageThisWeek);
     const awakeHoursPerDay = Math.max(0, 24 - sleepHoursPerDay);
-
     const workScale = getWorkScaleForAge(ageThisWeek);
 
-    const requestedAwakeHours = activityInputs.reduce(
-      (sum, field) => {
-        const hours = field.key === "work" ? activityHours[field.key] * workScale : activityHours[field.key];
-        return sum + hours;
-      },
-      0
-    );
+    const requestedAwakeHours = activityInputs.reduce((sum, field) => {
+      const hours = field.key === "work" ? activityHours[field.key] * workScale : activityHours[field.key];
+      return sum + hours;
+    }, 0);
 
-    const clampScale = requestedAwakeHours > awakeHoursPerDay ? awakeHoursPerDay / requestedAwakeHours : 1;
-
-    if (clampScale < 1) {
-      dailyClampedWeeks += 1;
-    }
+    const clampScale = requestedAwakeHours > awakeHoursPerDay
+      ? awakeHoursPerDay / requestedAwakeHours : 1;
 
     futureFloatWeeks.sleep += sleepHoursPerDay / 24;
 
@@ -244,186 +227,376 @@ function calculateModel({ age, lifeExpectancy, activityHours }) {
   const roundedWeeks = allocateRoundedWeeks(futureWeeks, futureFloatWeeks);
 
   const futureSegments = [
-    {
-      key: "sleep",
-      cssClass: "sleep",
-      titleLabel: "projected sleep",
-      weeks: roundedWeeks.sleep
-    },
+    { key: "sleep", cssClass: "sleep", weeks: roundedWeeks.sleep },
     ...activityInputs.map((field) => ({
-      key: field.key,
-      cssClass: field.cssClass,
-      titleLabel: field.titleLabel,
-      weeks: roundedWeeks[field.key]
+      key: field.key, cssClass: field.cssClass, weeks: roundedWeeks[field.key]
     })),
-    {
-      key: "free",
-      cssClass: "free",
-      titleLabel: "other future time",
-      weeks: roundedWeeks.free
-    }
+    { key: "free", cssClass: "free", weeks: roundedWeeks.free }
   ];
 
-  const lifetimePhoneWeeks = Math.round(totalWeeks * (activityHours.phone / 24));
-
   return {
-    totalWeeks,
-    livedWeeks,
-    futureWeeks,
+    totalWeeks, livedWeeks, futureWeeks,
     futureSegments,
-    segmentWeeks: roundedWeeks,
-    lifetimePhoneWeeks,
-    dailyClampedWeeks
+    segmentWeeks: roundedWeeks
   };
 }
 
-function renderSummary(model) {
-  const stats = [
-    { label: "Weeks lived", value: `${formatWeeks(model.livedWeeks)} (${formatYears(model.livedWeeks)})` },
-    {
-      label: "Projected future sleep",
-      value: `${formatWeeks(model.segmentWeeks.sleep)} (${formatYears(model.segmentWeeks.sleep)})`
-    },
-    ...activityInputs.map((field) => ({
-      label: field.summaryLabel,
-      value: `${formatWeeks(model.segmentWeeks[field.key])} (${formatYears(model.segmentWeeks[field.key])})`
-    })),
-    {
-      label: "Other future time",
-      value: `${formatWeeks(model.segmentWeeks.free)} (${formatYears(model.segmentWeeks.free)})`
-    },
-    {
-      label: "Phone time over full life (at current average)",
-      value: `${formatWeeks(model.lifetimePhoneWeeks)} (${formatYears(model.lifetimePhoneWeeks)})`
-    }
-  ];
+/* ═══════════════════════════════════════
+   Rendering
+   ═══════════════════════════════════════ */
 
-  if (!summaryEl) return;
-  summaryEl.innerHTML = stats
-    .map(
-      (stat) => `
-        <article class="stat">
-          <div class="label">${stat.label}</div>
-          <div class="value">${stat.value}</div>
-        </article>
-      `
-    )
-    .join("");
-}
+let cachedCategoryBoxes = {};
+let currentModel = null;
 
-function renderGrid(model) {
-  const completedFragment = document.createDocumentFragment();
-  const sleepFragment = document.createDocumentFragment();
-  const workFragment = document.createDocumentFragment();
-  const activitiesFragment = document.createDocumentFragment();
-  const remainingFragment = document.createDocumentFragment();
-
-  const sleepWeeks = model.segmentWeeks.sleep;
-  const workWeeks = model.segmentWeeks.work ?? 0;
-  const projectedActivityWeeks = PROJECTED_ACTIVITY_KEYS.reduce(
-    (sum, key) => sum + (model.segmentWeeks[key] ?? 0),
-    0
-  );
-  const remainingAwakeWeeks = REMAINING_AWAKE_KEYS.reduce(
-    (sum, key) => sum + (model.segmentWeeks[key] ?? 0),
-    0
-  );
-  const futureSegmentsByKey = new Map(model.futureSegments.map((segment) => [segment.key, segment]));
-
-  completedMetaEl.textContent = formatWeeks(model.livedWeeks);
-  sleepMetaEl.textContent = formatWeeks(sleepWeeks);
-  workMetaEl.textContent = formatWeeks(workWeeks);
-  activitiesMetaEl.textContent = formatWeeks(projectedActivityWeeks);
-  remainingMetaEl.textContent = formatWeeks(remainingAwakeWeeks);
-
-  if (remainingBreakdownEl && remainingAwakeWeeks > 0) {
-    const phoneWeeks = model.segmentWeeks.phone ?? 0;
-    const freeWeeks = model.segmentWeeks.free ?? 0;
-    const phonePct = Math.round((phoneWeeks / remainingAwakeWeeks) * 100);
-    const freePct = 100 - phonePct;
-    remainingBreakdownEl.textContent = `${phonePct}% screen · ${freePct}% free`;
-  }
-
-  for (let week = 0; week < model.livedWeeks; week += 1) {
+function renderAll(model) {
+  // --- Completed grid ---
+  const completedFrag = document.createDocumentFragment();
+  for (let w = 0; w < model.livedWeeks; w++) {
     const box = document.createElement("div");
     box.className = "week lived";
-    box.title = `Completed week ${week + 1}`;
-    completedFragment.appendChild(box);
+    completedFrag.appendChild(box);
+  }
+  completedGridEl.replaceChildren(completedFrag);
+  completedMetaEl.textContent = formatWeeks(model.livedWeeks);
+
+  // --- Unified future grid (all future weeks, neutral color) ---
+  const unifiedFrag = document.createDocumentFragment();
+  for (const seg of model.futureSegments) {
+    for (let w = 0; w < seg.weeks; w++) {
+      const box = document.createElement("div");
+      box.className = "week neutral";
+      box.dataset.category = seg.key;
+      unifiedFrag.appendChild(box);
+    }
+  }
+  unifiedGridEl.replaceChildren(unifiedFrag);
+  unifiedMetaEl.textContent = formatWeeks(model.futureWeeks);
+
+  // Cache category box references for scroll handler
+  cachedCategoryBoxes = {};
+  for (const key of ["sleep", "work", ...ACTIVITIES_SUBCATEGORIES, ...REMAINING_AWAKE_KEYS]) {
+    cachedCategoryBoxes[key] = unifiedGridEl.querySelectorAll(`[data-category="${key}"]`);
   }
 
-  for (let week = 0; week < sleepWeeks; week += 1) {
+  // --- Extracted section grids (pre-rendered, hidden until scroll) ---
+  const sleepFrag = document.createDocumentFragment();
+  for (let w = 0; w < model.segmentWeeks.sleep; w++) {
     const box = document.createElement("div");
     box.className = "week sleep";
-    box.title = `Projected sleep week ${week + 1}`;
-    sleepFragment.appendChild(box);
+    sleepFrag.appendChild(box);
   }
+  sleepGridEl.replaceChildren(sleepFrag);
+  sleepMetaEl.textContent = formatWeeks(model.segmentWeeks.sleep);
 
-  for (let week = 0; week < workWeeks; week += 1) {
+  const workFrag = document.createDocumentFragment();
+  const workWeeks = model.segmentWeeks.work ?? 0;
+  for (let w = 0; w < workWeeks; w++) {
     const box = document.createElement("div");
     box.className = "week work";
-    box.title = `Projected work week ${week + 1}`;
-    workFragment.appendChild(box);
+    workFrag.appendChild(box);
   }
+  workGridEl.replaceChildren(workFrag);
+  workMetaEl.textContent = formatWeeks(workWeeks);
 
+  const actFrag = document.createDocumentFragment();
+  let actTotal = 0;
   for (const key of PROJECTED_ACTIVITY_KEYS) {
-    const segment = futureSegmentsByKey.get(key);
-    if (!segment) {
-      continue;
-    }
-
-    for (let week = 0; week < segment.weeks; week += 1) {
+    const weeks = model.segmentWeeks[key] ?? 0;
+    actTotal += weeks;
+    for (let w = 0; w < weeks; w++) {
       const box = document.createElement("div");
-      box.className = `week ${segment.cssClass}`;
-      box.title = segment.titleLabel;
-      activitiesFragment.appendChild(box);
+      box.className = `week ${key}`;
+      actFrag.appendChild(box);
     }
   }
+  activitiesGridEl.replaceChildren(actFrag);
+  activitiesMetaEl.textContent = formatWeeks(actTotal);
 
+  // --- What's left grid (pre-rendered, shown at bottom after all extractions) ---
+  const wlFrag = document.createDocumentFragment();
+  let wlTotal = 0;
   for (const key of REMAINING_AWAKE_KEYS) {
-    const segment = futureSegmentsByKey.get(key);
-    if (!segment) {
-      continue;
-    }
-
-    for (let week = 0; week < segment.weeks; week += 1) {
+    const weeks = model.segmentWeeks[key] ?? 0;
+    wlTotal += weeks;
+    for (let w = 0; w < weeks; w++) {
       const box = document.createElement("div");
-      box.className = `week ${segment.cssClass}`;
-      box.title = segment.titleLabel;
-      remainingFragment.appendChild(box);
+      box.className = `week ${key}`;
+      wlFrag.appendChild(box);
     }
   }
+  whatsLeftGridEl.replaceChildren(wlFrag);
+  whatsLeftMetaEl.textContent = formatWeeks(wlTotal);
 
-  completedGridEl.replaceChildren(completedFragment);
-  sleepGridEl.replaceChildren(sleepFragment);
-  workGridEl.replaceChildren(workFragment);
-  activitiesGridEl.replaceChildren(activitiesFragment);
-  remainingGridEl.replaceChildren(remainingFragment);
+  if (wlTotal > 0) {
+    const phoneWeeks = model.segmentWeeks.phone ?? 0;
+    const phonePct = Math.round((phoneWeeks / wlTotal) * 100);
+    whatsLeftBreakdownEl.textContent = `${phonePct}% screen \u00b7 ${100 - phonePct}% free`;
+  }
 }
 
-function updateVisualization() {
-  const parsed = parseInputs();
+/* ═══════════════════════════════════════
+   Scroll Extraction
+   ═══════════════════════════════════════ */
 
-  if (parsed.error) {
-    validationMessage.textContent = parsed.error;
+const extractionState = {
+  sleep: { colorized: false, extracted: false },
+  work: { colorized: false, extracted: false },
+  activities: { colorized: false, extracted: false }
+};
+
+function getScrollProgress(el) {
+  const rect = el.getBoundingClientRect();
+  const vh = window.innerHeight;
+  return Math.max(0, Math.min(1, (vh - rect.top) / (rect.height + vh)));
+}
+
+function colorizeBoxes(category) {
+  if (category === "activities") {
+    for (const sub of ACTIVITIES_SUBCATEGORIES) {
+      if (cachedCategoryBoxes[sub]) {
+        cachedCategoryBoxes[sub].forEach((box) => {
+          box.classList.remove("neutral");
+          box.classList.add(sub);
+        });
+      }
+    }
+  } else {
+    if (cachedCategoryBoxes[category]) {
+      cachedCategoryBoxes[category].forEach((box) => {
+        box.classList.remove("neutral");
+        box.classList.add(category);
+      });
+    }
+  }
+}
+
+let heightAnimating = false;
+
+function extractBoxes(category) {
+  const grid = unifiedGridEl;
+
+  // Determine which subcategory keys to extract
+  let keys;
+  if (category === "activities") {
+    keys = [...ACTIVITIES_SUBCATEGORIES];
+  } else {
+    keys = [category];
+  }
+
+  // If a previous height animation is still running, resolve it immediately
+  if (heightAnimating) {
+    grid.style.transition = "none";
+    grid.style.height = "";
+    grid.offsetHeight; // force reflow
+    grid.style.transition = "";
+  }
+
+  // 1. Lock current grid height
+  const currentHeight = grid.getBoundingClientRect().height;
+  grid.style.height = currentHeight + "px";
+
+  // 2. Apply break-off animation to all boxes for these keys
+  const boxesToRemove = [];
+  for (const key of keys) {
+    if (cachedCategoryBoxes[key]) {
+      cachedCategoryBoxes[key].forEach((box) => {
+        box.classList.add("breaking-off");
+        boxesToRemove.push(box);
+      });
+    }
+  }
+
+  // 3. After animation completes, remove from DOM and transition height
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const animDuration = reducedMotion ? 0 : 500;
+
+  heightAnimating = true;
+
+  setTimeout(() => {
+    // Remove boxes from DOM
+    for (const box of boxesToRemove) {
+      box.remove();
+    }
+
+    // Invalidate cached references for removed categories
+    for (const key of keys) {
+      delete cachedCategoryBoxes[key];
+    }
+
+    // Calculate new natural height
+    grid.style.height = "auto";
+    const newHeight = grid.getBoundingClientRect().height;
+    grid.style.height = currentHeight + "px";
+
+    // Force reflow, then set target height
+    grid.offsetHeight;
+
+    if (reducedMotion) {
+      grid.style.height = newHeight + "px";
+      setTimeout(() => {
+        grid.style.height = "";
+        heightAnimating = false;
+        // Update meta label
+        unifiedMetaEl.textContent = formatWeeks(grid.children.length);
+        checkFinalState();
+      }, 50);
+    } else {
+      grid.style.height = newHeight + "px";
+
+      // Update meta label
+      unifiedMetaEl.textContent = formatWeeks(grid.children.length);
+
+      // After height transition completes, remove explicit height
+      setTimeout(() => {
+        grid.style.height = "";
+        heightAnimating = false;
+        checkFinalState();
+      }, 650);
+    }
+  }, animDuration + 50);
+}
+
+function checkFinalState() {
+  const allDone = EXTRACTION_ORDER.every((cat) => extractionState[cat].extracted);
+  if (!allDone) return;
+
+  const unifiedSection = document.getElementById("section-unified");
+
+  // Collapse the sticky unified grid (fades out + shrinks via CSS)
+  unifiedSection.classList.remove("sticky-shelf");
+  unifiedSection.classList.add("final-state");
+
+  // Collapse scroll spacers (no longer needed)
+  document.querySelectorAll(".scroll-spacer").forEach((spacer) => {
+    spacer.style.height = "0";
+  });
+
+  // Reveal the bottom "What's left" section
+  const whatsLeftSection = document.getElementById("section-whats-left");
+  if (whatsLeftSection) whatsLeftSection.classList.add("extracted");
+}
+
+let stickyActivated = false;
+
+function updateExtractions() {
+  const spacers = document.querySelectorAll(".scroll-spacer");
+
+  // Activate sticky once user reaches the first spacer
+  if (!stickyActivated) {
+    const firstSpacer = spacers[0];
+    if (firstSpacer) {
+      const progress = getScrollProgress(firstSpacer);
+      if (progress > 0.05) {
+        stickyActivated = true;
+        document.getElementById("section-unified").classList.add("sticky-shelf");
+      }
+    }
+  }
+
+  spacers.forEach((spacer) => {
+    const category = spacer.dataset.extract;
+    const state = extractionState[category];
+    if (!state) return;
+
+    const progress = getScrollProgress(spacer);
+
+    if (progress > 0.15 && !state.colorized) {
+      state.colorized = true;
+      colorizeBoxes(category);
+    }
+
+    if (progress > 0.5 && !state.extracted) {
+      state.extracted = true;
+      extractBoxes(category);
+
+      const section = document.getElementById(`section-${category}`);
+      if (section) section.classList.add("extracted");
+    }
+  });
+}
+
+function initScrollExtraction() {
+  let ticking = false;
+
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      updateExtractions();
+      ticking = false;
+    });
+  }
+
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+}
+
+/* ═══════════════════════════════════════
+   Onboarding
+   ═══════════════════════════════════════ */
+
+const onboardingEl = document.getElementById("onboarding");
+const onboardingAgeInput = document.getElementById("onboarding-age");
+const onboardingScreenInput = document.getElementById("onboarding-screen");
+const onboardingNextBtn = document.getElementById("onboarding-next");
+const onboardingGoBtn = document.getElementById("onboarding-go");
+const visualizationEl = document.getElementById("visualization");
+
+function advanceOnboarding() {
+  const age = parseFloat(onboardingAgeInput.value);
+  if (!isFinite(age) || age < 0 || age > 120) {
+    onboardingAgeInput.style.borderColor = "#b34a58";
     return;
   }
-
-  validationMessage.textContent = "";
-
-  const model = calculateModel(parsed);
-  renderSummary(model);
-  renderGrid(model);
+  onboardingAgeInput.style.borderColor = "";
+  document.querySelector("[data-step='0']").classList.add("hidden");
+  document.querySelector("[data-step='1']").classList.remove("hidden");
+  onboardingScreenInput.focus();
 }
 
-controls.addEventListener("submit", (event) => {
-  event.preventDefault();
-  updateVisualization();
+function completeOnboarding() {
+  const screen = parseFloat(onboardingScreenInput.value);
+  if (!isFinite(screen) || screen < 0 || screen > 24) {
+    onboardingScreenInput.style.borderColor = "#b34a58";
+    return;
+  }
+  onboardingScreenInput.style.borderColor = "";
+
+  // Transfer values to hidden inputs
+  ageInput.value = onboardingAgeInput.value;
+  document.getElementById("screenTime").value = onboardingScreenInput.value;
+
+  // Calculate and render
+  const parsed = parseInputs();
+  if (parsed.error) return;
+
+  const model = calculateModel(parsed);
+  currentModel = model;
+  renderAll(model);
+
+  // Transition: fade out onboarding, fade in visualization
+  onboardingEl.classList.add("done");
+  visualizationEl.classList.remove("viz-hidden");
+
+  // Start scroll extraction after transition
+  setTimeout(() => {
+    initScrollExtraction();
+  }, 400);
+}
+
+onboardingNextBtn.addEventListener("click", advanceOnboarding);
+onboardingGoBtn.addEventListener("click", completeOnboarding);
+
+onboardingAgeInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    advanceOnboarding();
+  }
 });
 
-[ageInput, lifeExpectancyInput, ...activityInputs.map((field) => field.element)].forEach((input) => {
-  input.addEventListener("input", () => {
-    updateVisualization();
-  });
+onboardingScreenInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    completeOnboarding();
+  }
 });
-
-updateVisualization();
