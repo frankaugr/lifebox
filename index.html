@@ -87,94 +87,112 @@
 
     <!-- Visualization (hidden until onboarding completes) -->
     <main id="visualization" class="app viz-hidden">
-
-      <!-- Completed weeks -->
-      <section class="viz-section" id="section-completed">
-        <div class="viz-label">
-          <h3>Completed</h3>
-          <p id="completedMeta" class="viz-meta"></p>
+      <section class="viz-section viz-intro" id="section-intro">
+        <div class="viz-shell">
+          <div class="viz-rail intro-rail">
+            <p class="viz-kicker">Life calendar</p>
+            <h3>Completed</h3>
+            <p id="introMeta" class="viz-meta"></p>
+          </div>
+          <div class="viz-grid-panel">
+            <div id="introWeeksGrid" class="weeks-grid" aria-label="Life calendar in weeks"></div>
+          </div>
         </div>
-        <div id="completedWeeksGrid" class="weeks-grid" aria-label="Completed weeks"></div>
       </section>
 
-      <!-- Unified future grid (shrinks as categories are extracted) -->
-      <section class="viz-section" id="section-unified">
-        <div class="viz-label">
-          <h3 id="unifiedTitle">Remaining</h3>
-          <p id="unifiedMeta" class="viz-meta"></p>
-        </div>
-        <div id="extractionGhosts" class="extraction-ghosts" aria-hidden="true"></div>
-        <div id="unifiedWeeksGrid" class="weeks-grid" aria-label="Remaining weeks"></div>
-      </section>
-
-      <!-- Scroll cue after unified grid -->
       <div class="scroll-cue" id="scrollCue">
-        <span class="scroll-cue-text">Scroll to see where your time goes</span>
+        <span class="scroll-cue-text">Scroll to watch the remaining weeks break apart</span>
         <svg class="scroll-cue-arrow" width="20" height="20" viewBox="0 0 20 20" fill="none">
           <path d="M10 4v10M5 10l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
 
-      <!-- Scroll spacers (drive extraction timing) -->
-      <div class="scroll-spacer" data-extract="sleep">
-        <p class="spacer-prompt">You'll spend a third of your remaining life asleep.</p>
-      </div>
-      <div class="scroll-spacer" data-extract="work">
-        <p class="spacer-prompt">Then there's work.</p>
-      </div>
-      <div class="scroll-spacer" data-extract="activities">
-        <p class="spacer-prompt">Eating, hygiene, chores, commuting, errands&hellip;</p>
+      <div id="extractedStack" class="extracted-stack">
+        <section class="viz-section extraction-result" id="section-sleep">
+          <div class="viz-shell">
+            <div class="viz-rail">
+              <p class="viz-kicker">Pulled out</p>
+              <h3>Sleep</h3>
+              <p id="sleepMeta" class="viz-meta"></p>
+            </div>
+            <div class="viz-grid-panel">
+              <div id="sleepWeeksGrid" class="weeks-grid" aria-label="Sleep weeks"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="viz-section extraction-result" id="section-work">
+          <div class="viz-shell">
+            <div class="viz-rail">
+              <p class="viz-kicker">Pulled out</p>
+              <h3>Work</h3>
+              <p id="workMeta" class="viz-meta"></p>
+            </div>
+            <div class="viz-grid-panel">
+              <div id="workWeeksGrid" class="weeks-grid" aria-label="Work weeks"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="viz-section extraction-result" id="section-activities">
+          <div class="viz-shell">
+            <div class="viz-rail">
+              <p class="viz-kicker">Pulled out</p>
+              <h3>Activities</h3>
+              <p id="activitiesMeta" class="viz-meta"></p>
+            </div>
+            <div class="viz-grid-panel">
+              <div id="activitiesWeeksGrid" class="weeks-grid" aria-label="Activity weeks"></div>
+              <div class="legend legend-inline">
+                <div class="legend-item"><span class="swatch eating"></span>Eating</div>
+                <div class="legend-item"><span class="swatch hygiene"></span>Hygiene</div>
+                <div class="legend-item"><span class="swatch chores"></span>Chores</div>
+                <div class="legend-item"><span class="swatch commute"></span>Commute</div>
+                <div class="legend-item"><span class="swatch errands"></span>Errands</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="viz-section extraction-result" id="section-whats-left">
+          <div class="viz-shell">
+            <div class="viz-rail">
+              <p class="viz-kicker">Pulled out</p>
+              <h3>What's left</h3>
+              <p id="whatsLeftMeta" class="viz-meta"></p>
+            </div>
+            <div class="viz-grid-panel">
+              <div id="whatsLeftGrid" class="weeks-grid" aria-label="Remaining awake weeks"></div>
+              <div class="legend legend-inline">
+                <div class="legend-item"><span class="swatch phone"></span>Screen time</div>
+                <div class="legend-item"><span class="swatch free"></span>Free time</div>
+                <p id="whatsLeftBreakdown" class="grid-breakdown"></p>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
 
-      <!-- Extra scroll room so grid shrinkage doesn't prevent reaching extraction thresholds -->
+      <section class="viz-section stage-section is-hidden" id="section-stage">
+        <div class="viz-shell">
+          <div class="viz-rail stage-rail" id="stageRail">
+            <p id="stageKicker" class="viz-kicker">Remaining</p>
+            <h3 id="stageTitle">Remaining</h3>
+            <p id="stageMeta" class="viz-meta"></p>
+          </div>
+          <div class="viz-grid-panel">
+            <div id="remainingStageGrid" class="weeks-grid" aria-label="Remaining weeks"></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="scroll-spacer" data-step="breakoff" aria-hidden="true"></div>
+      <div class="scroll-spacer" data-step="sleep" aria-hidden="true"></div>
+      <div class="scroll-spacer" data-step="work" aria-hidden="true"></div>
+      <div class="scroll-spacer" data-step="activities" aria-hidden="true"></div>
+      <div class="scroll-spacer" data-step="whats-left" aria-hidden="true"></div>
       <div class="scroll-buffer" aria-hidden="true"></div>
 
-      <!-- Extraction result sections (hidden until all extractions complete) -->
-      <section class="viz-section extraction-result" id="section-sleep">
-        <div class="viz-label">
-          <h3>Sleep</h3>
-          <p id="sleepMeta" class="viz-meta"></p>
-        </div>
-        <div id="sleepWeeksGrid" class="weeks-grid" aria-label="Sleep weeks"></div>
-      </section>
-
-      <section class="viz-section extraction-result" id="section-work">
-        <div class="viz-label">
-          <h3>Work</h3>
-          <p id="workMeta" class="viz-meta"></p>
-        </div>
-        <div id="workWeeksGrid" class="weeks-grid" aria-label="Work weeks"></div>
-      </section>
-
-      <section class="viz-section extraction-result" id="section-activities">
-        <div class="viz-label">
-          <h3>Activities</h3>
-          <p id="activitiesMeta" class="viz-meta"></p>
-        </div>
-        <div id="activitiesWeeksGrid" class="weeks-grid" aria-label="Activity weeks"></div>
-        <div class="legend legend-inline">
-          <div class="legend-item"><span class="swatch eating"></span>Eating</div>
-          <div class="legend-item"><span class="swatch hygiene"></span>Hygiene</div>
-          <div class="legend-item"><span class="swatch chores"></span>Chores</div>
-          <div class="legend-item"><span class="swatch commute"></span>Commute</div>
-          <div class="legend-item"><span class="swatch errands"></span>Errands</div>
-        </div>
-      </section>
-
-      <section class="viz-section extraction-result" id="section-whats-left">
-        <div class="viz-label">
-          <h3>What's left</h3>
-          <p id="whatsLeftMeta" class="viz-meta"></p>
-        </div>
-        <div id="whatsLeftGrid" class="weeks-grid" aria-label="Remaining awake weeks"></div>
-        <div class="legend legend-inline">
-          <div class="legend-item"><span class="swatch phone"></span>Screen time</div>
-          <div class="legend-item"><span class="swatch free"></span>Free time</div>
-          <p id="whatsLeftBreakdown" class="grid-breakdown"></p>
-        </div>
-      </section>
-
-      <!-- Sources -->
       <section class="sources">
         <p class="sources-heading">Activity time estimates</p>
         <p>
