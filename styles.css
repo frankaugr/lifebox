@@ -24,7 +24,7 @@
   --cell-gap: 2px;
   --app-width: 1120px;
   --page-padding: 1.25rem;
-  --sticky-top: 0.7rem;
+  --sticky-top: clamp(3.5rem, 16vh, 7.5rem);
   --shell-gap: 1.5rem;
 
   color-scheme: dark;
@@ -281,7 +281,7 @@ body {
 }
 
 .viz-section {
-  margin: 0 0 2.4rem;
+  margin: 0 0 0.75rem;
 }
 
 .viz-shell {
@@ -321,24 +321,7 @@ body {
 
 .viz-grid-panel {
   position: relative;
-  padding: 1.15rem;
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  background: var(--surface);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.02),
-    0 18px 42px rgba(0, 0, 0, 0.26);
-  overflow: hidden;
-}
-
-.viz-intro .viz-grid-panel {
-  background:
-    linear-gradient(180deg, rgba(18, 24, 38, 0.97), rgba(14, 18, 29, 0.94)),
-    var(--surface);
-}
-
-.viz-intro.is-peeled .viz-grid-panel {
-  border-color: rgba(180, 188, 206, 0.22);
+  overflow: visible;
 }
 
 .stage-rail {
@@ -381,7 +364,7 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  padding: 1.2rem 0 2.6rem;
+  padding: 0.75rem 0 1.25rem;
   opacity: 0;
   transition: opacity 0.8s ease 0.5s;
 }
@@ -418,43 +401,69 @@ body {
   }
 }
 
-.extracted-stack {
+.extraction-result {
+  margin: 0 0 0.5rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid rgba(115, 123, 144, 0.16);
+}
+
+.completed-result {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.extraction-result:not(.revealed) {
+  margin-bottom: 0;
+  padding-top: 0;
+  border-top-color: transparent;
+}
+
+.extraction-result:not(.revealed) .viz-rail,
+.extraction-result:not(.revealed) .legend {
+  visibility: hidden;
+}
+
+.extraction-result.is-measuring {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.extraction-result .viz-rail,
+.extraction-result .legend {
+  opacity: 0;
+  transform: translateX(-10px);
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+
+.extraction-result.is-active .viz-rail,
+.extraction-result.is-active .legend,
+.extraction-result.revealed .viz-rail,
+.extraction-result.revealed .legend {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.story-step {
   position: relative;
 }
 
-.extraction-result {
-  opacity: 0;
-  max-height: 0;
-  overflow: hidden;
-  margin: 0;
-  transform: translateY(30px);
-  filter: blur(5px);
-  transition:
-    opacity 0.72s ease,
-    transform 0.72s ease,
-    filter 0.72s ease,
-    max-height 0.72s ease,
-    margin-bottom 0.72s ease;
-}
-
-.extraction-result.revealed {
-  opacity: 1;
-  max-height: 2200px;
-  overflow: visible;
-  margin-bottom: 2.4rem;
-  transform: translateY(0);
-  filter: none;
+.story-step .scroll-spacer {
+  height: 6vh;
 }
 
 .stage-section {
   margin-bottom: 0;
 }
 
+.stage-section .viz-shell {
+  width: 100%;
+  align-items: start;
+}
+
 .stage-section.is-hidden {
-  margin: 0;
-  max-height: 0;
-  overflow: hidden;
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
 }
 
@@ -467,7 +476,6 @@ body {
   transform: translateX(-50%);
   z-index: 35;
   margin: 0;
-  max-height: none;
   overflow: visible;
 }
 
@@ -485,25 +493,32 @@ body {
 
 .stage-section.is-live {
   opacity: 1;
-  max-height: none;
+  visibility: visible;
   overflow: visible;
   pointer-events: auto;
 }
 
+.stage-section.is-live.overlay-stage {
+  position: fixed;
+  z-index: 25;
+  padding: 0;
+  background:
+    linear-gradient(180deg, rgba(9, 11, 18, 0.12), rgba(9, 11, 18, 0.9) 16%, rgba(9, 11, 18, 0.9) 84%, rgba(9, 11, 18, 0.12));
+  pointer-events: none;
+}
+
 .stage-section.is-live.sticky-stage {
   position: sticky;
-  top: 0;
+  top: var(--sticky-top);
   z-index: 25;
-  padding: 0.85rem 0 1.35rem;
-  background: linear-gradient(180deg, rgba(9, 11, 18, 0.98), rgba(9, 11, 18, 0.92) 70%, rgba(9, 11, 18, 0));
+  padding: 0;
+  background:
+    linear-gradient(180deg, rgba(9, 11, 18, 0.12), rgba(9, 11, 18, 0.9) 16%, rgba(9, 11, 18, 0.9) 84%, rgba(9, 11, 18, 0.12));
 }
 
 .stage-section.is-complete {
   opacity: 0;
-  max-height: 0;
-  overflow: hidden;
-  margin: 0;
-  padding: 0;
+  visibility: hidden;
   pointer-events: none;
 }
 
@@ -512,6 +527,22 @@ body {
   flex-wrap: wrap;
   gap: 0.45rem 1rem;
   margin-top: 0.8rem;
+}
+
+.grid-with-side-legend {
+  display: grid;
+  grid-template-columns: auto max-content;
+  gap: 0 1.35rem;
+  align-items: start;
+  justify-content: center;
+}
+
+.legend-side {
+  display: grid;
+  gap: 0.55rem;
+  align-content: start;
+  margin: 0;
+  padding-top: 0.2rem;
 }
 
 .legend-item {
@@ -707,7 +738,17 @@ body {
 }
 
 #section-whats-left .viz-grid-panel {
-  overflow: hidden;
+  overflow: visible;
+}
+
+.extraction-result .viz-grid-panel,
+.stage-section .viz-grid-panel {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  overflow: visible;
 }
 
 #whatsLeftGrid {
@@ -813,9 +854,8 @@ body {
 }
 
 .scroll-spacer {
-  height: 62vh;
+  height: 10vh;
   pointer-events: none;
-  transition: height 0.7s ease, opacity 0.35s ease;
 }
 
 .scroll-spacer.collapsed {
@@ -825,9 +865,8 @@ body {
 }
 
 .scroll-buffer {
-  height: 34vh;
+  height: 4vh;
   pointer-events: none;
-  transition: height 0.6s ease;
 }
 
 .scroll-buffer.collapsed {
@@ -895,6 +934,18 @@ body {
   .stage-section.is-floating {
     width: calc(100vw - (var(--page-padding) * 2));
   }
+
+  .grid-with-side-legend {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+    justify-items: start;
+  }
+
+  .legend-side {
+    grid-template-columns: repeat(2, minmax(0, max-content));
+    gap: 0.45rem 1rem;
+    padding-top: 0;
+  }
 }
 
 @media (max-width: 680px) {
@@ -902,6 +953,7 @@ body {
     --cell-size: 6px;
     --cell-gap: 1px;
     --page-padding: 0.7rem;
+    --sticky-top: clamp(2.8rem, 12vh, 4.8rem);
   }
 
   .app {
@@ -924,12 +976,17 @@ body {
   }
 
   .viz-section {
-    margin-bottom: 1.8rem;
+    margin-bottom: 0.6rem;
   }
 
   .viz-grid-panel {
-    padding: 0.7rem;
-    border-radius: 16px;
+    padding: 0;
+    border-radius: 0;
+  }
+
+  .extraction-result {
+    margin-bottom: 0.35rem;
+    padding-top: 0.45rem;
   }
 
   .viz-kicker {
@@ -955,11 +1012,11 @@ body {
   }
 
   .scroll-spacer {
-    height: 48vh;
+    height: 8vh;
   }
 
   .scroll-buffer {
-    height: 22vh;
+    height: 3vh;
   }
 
   .progress-dots {
@@ -970,6 +1027,14 @@ body {
   .progress-dots .dot {
     width: 5px;
     height: 5px;
+  }
+
+  .legend-side {
+    grid-template-columns: 1fr;
+  }
+
+  .story-step .scroll-spacer {
+    height: 4vh;
   }
 }
 

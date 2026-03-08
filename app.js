@@ -43,13 +43,7 @@ const STORY_STEPS = [
 ];
 
 const BREAKOFF_TRIGGER = 0.2;
-const STEP_ENTRY_TRIGGER = 0.12;
-const STEP_COLOR_TRIGGER = 0.28;
-const STEP_EXTRACT_TRIGGER = 0.62;
 const BREAKOFF_DURATION_MS = 780;
-const PEEL_DURATION_MS = 720;
-const PEEL_STAGGER_MS = 220;
-const POST_STEP_LOCK_MS = 380;
 const FINAL_EFFECT_MS = 1200;
 
 const ageInput = document.getElementById("age");
@@ -59,11 +53,10 @@ const validationMessage = document.getElementById("validationMessage");
 const visualizationEl = document.getElementById("visualization");
 const progressDotsEl = document.getElementById("progressDots");
 const scrollCueEl = document.getElementById("scrollCue");
-const scrollBufferEl = document.querySelector(".scroll-buffer");
-const sourcesSectionEl = document.querySelector(".sources");
 
 const introSectionEl = document.getElementById("section-intro");
 const introGridEl = document.getElementById("introWeeksGrid");
+const introKickerEl = document.getElementById("introKicker");
 const introMetaEl = document.getElementById("introMeta");
 
 const stageSectionEl = document.getElementById("section-stage");
@@ -87,6 +80,12 @@ const whatsLeftBreakdownEl = document.getElementById("whatsLeftBreakdown");
 const extractedSectionEls = Object.fromEntries(
   STORY_STEPS.map((step) => [step.id, document.getElementById(step.targetSectionId)])
 );
+const extractedGridEls = {
+  sleep: sleepGridEl,
+  work: workGridEl,
+  activities: activitiesGridEl,
+  "whats-left": whatsLeftGridEl
+};
 
 const spacerEls = Array.from(document.querySelectorAll(".scroll-spacer"));
 const spacerByStep = Object.fromEntries(spacerEls.map((spacer) => [spacer.dataset.step, spacer]));
@@ -111,6 +110,7 @@ const storyState = {
   scrollCueFaded: false,
   stepStates: {},
   stageBoxesByCategory: {},
+  stageRemainingCount: 0,
   finalEffectTimer: null
 };
 
@@ -152,6 +152,38 @@ function getSleepHoursForAge(ageYears) {
 
 function formatWeeks(weeks) {
   return `${weeks.toLocaleString()} weeks`;
+}
+
+function getReservedGridHeight(rows) {
+  if (!rows) {
+    return "0px";
+  }
+
+  return `calc((var(--cell-size) * ${rows}) + (var(--cell-gap) * ${Math.max(rows - 1, 0)}))`;
+}
+
+function setReservedRows(gridEl, rows) {
+  gridEl.style.minHeight = getReservedGridHeight(rows);
+}
+
+function clearStageOverlayStyle() {
+  stageSectionEl.style.top = "";
+  stageSectionEl.style.left = "";
+  stageSectionEl.style.width = "";
+  stageSectionEl.style.transform = "";
+}
+
+function syncStageOverlayToIntro() {
+  const introShellRect = introSectionEl.querySelector(".viz-shell")?.getBoundingClientRect();
+  if (!introShellRect) {
+    clearStageOverlayStyle();
+    return;
+  }
+
+  stageSectionEl.style.top = `${introShellRect.top}px`;
+  stageSectionEl.style.left = `${introShellRect.left}px`;
+  stageSectionEl.style.width = `${introShellRect.width}px`;
+  stageSectionEl.style.transform = "none";
 }
 
 function allocateRoundedWeeks(totalWeeks, floatWeeksByKey) {
@@ -281,13 +313,18 @@ function calculateModel({ age, lifeExpectancy, activityHours }) {
     { key: "free", cssClass: "free", weeks: roundedWeeks.free }
   ];
 
-  return {
+  const model = {
     totalWeeks,
     livedWeeks,
     futureWeeks,
     futureSegments,
     segmentWeeks: roundedWeeks
   };
+
+  model.futureRows = futureWeeks > 0 ? Math.floor((futureWeeks - 1) / 52) + 1 : 0;
+  model.stepLayouts = buildStepLayouts(model);
+
+  return model;
 }
 
 function getStepCount(step, model = currentModel) {
@@ -296,6 +333,27 @@ function getStepCount(step, model = currentModel) {
   }
 
   return step.categories.reduce((sum, key) => sum + (model.segmentWeeks[key] ?? 0), 0);
+}
+
+function buildStepLayouts(model) {
+  let cursor = 0;
+
+  return Object.fromEntries(
+    STORY_STEPS.map((step) => {
+      const count = getStepCount(step, model);
+      const endIndex = count > 0 ? cursor + count - 1 : cursor;
+      const rows = count > 0 ? Math.floor(endIndex / 52) + 1 : 0;
+      const layout = {
+        count,
+        startIndex: cursor,
+        endIndex,
+        rows
+      };
+
+      cursor += count;
+      return [step.id, layout];
+    })
+  );
 }
 
 function populateGrid(gridEl, segments, options = {}) {
@@ -346,50 +404,43 @@ function renderIntroGrid(model) {
   introGridEl.querySelectorAll('[data-phase="future"]').forEach((box) => {
     box.classList.add("future-origin");
   });
-  introMetaEl.textContent = `${formatWeeks(model.livedWeeks)} completed · ${formatWeeks(model.futureWeeks)} remaining`;
+  applyIntroCopy(false, model);
 }
 
-function renderStageGrid(model) {
-  const stageSegments = model.futureSegments.map((segment) => ({
-    key: segment.key,
-    cssClass: "neutral",
-    weeks: segment.weeks,
-    phase: "future"
-  }));
+function applyIntroCopy(split = false, model = currentModel) {
+  if (!model) {
+    return;
+  }
 
-  populateGrid(stageGridEl, stageSegments, { neutral: true });
-  refreshStageBoxCache();
+  introKickerEl.textContent = split ? "Pulled out" : "Whole grid";
+  introMetaEl.textContent = split
+    ? formatWeeks(model.livedWeeks)
+    : `${formatWeeks(model.livedWeeks)} completed · ${formatWeeks(model.futureWeeks)} remaining`;
+}
+
+function renderStageGrid(model = currentModel) {
+  stageGridEl.replaceChildren();
+  storyState.stageBoxesByCategory = {};
+  storyState.stageRemainingCount = model?.futureWeeks ?? 0;
+  setReservedRows(stageGridEl, model?.futureRows ?? 0);
 }
 
 function renderExtractedSections(model) {
-  populateGrid(sleepGridEl, [{ key: "sleep", cssClass: "sleep", weeks: model.segmentWeeks.sleep }]);
+  sleepGridEl.replaceChildren();
+  setReservedRows(sleepGridEl, 0);
   sleepMetaEl.textContent = formatWeeks(model.segmentWeeks.sleep);
 
-  populateGrid(workGridEl, [{ key: "work", cssClass: "work", weeks: model.segmentWeeks.work }]);
+  workGridEl.replaceChildren();
+  setReservedRows(workGridEl, 0);
   workMetaEl.textContent = formatWeeks(model.segmentWeeks.work);
 
-  populateGrid(
-    activitiesGridEl,
-    ACTIVITIES_SUBCATEGORIES.map((key) => ({
-      key,
-      cssClass: key,
-      weeks: model.segmentWeeks[key]
-    }))
-  );
+  const activityTotal = ACTIVITIES_SUBCATEGORIES.reduce((sum, key) => sum + (model.segmentWeeks[key] ?? 0), 0);
+  activitiesGridEl.replaceChildren();
+  setReservedRows(activitiesGridEl, 0);
+  activitiesMetaEl.textContent = formatWeeks(activityTotal);
 
-  activitiesMetaEl.textContent = formatWeeks(
-    ACTIVITIES_SUBCATEGORIES.reduce((sum, key) => sum + (model.segmentWeeks[key] ?? 0), 0)
-  );
-
-  populateGrid(
-    whatsLeftGridEl,
-    REMAINING_AWAKE_KEYS.map((key) => ({
-      key,
-      cssClass: key,
-      weeks: model.segmentWeeks[key]
-    }))
-  );
-
+  whatsLeftGridEl.replaceChildren();
+  setReservedRows(whatsLeftGridEl, 0);
   const whatsLeftTotal = REMAINING_AWAKE_KEYS.reduce(
     (sum, key) => sum + (model.segmentWeeks[key] ?? 0),
     0
@@ -408,6 +459,7 @@ function renderExtractedSections(model) {
 
 function refreshStageBoxCache() {
   storyState.stageBoxesByCategory = {};
+  storyState.stageRemainingCount = 0;
 
   stageGridEl.querySelectorAll(".week").forEach((box) => {
     const category = box.dataset.category;
@@ -420,6 +472,7 @@ function refreshStageBoxCache() {
     }
 
     storyState.stageBoxesByCategory[category].push(box);
+    storyState.stageRemainingCount += 1;
   });
 }
 
@@ -432,38 +485,37 @@ function resetNarrativeState(model) {
   storyState.copySignature = "";
   storyState.scrollCueFaded = false;
   storyState.stepStates = buildStepStates();
+  storyState.stageBoxesByCategory = {};
+  storyState.stageRemainingCount = model.futureWeeks;
 
   if (storyState.finalEffectTimer) {
     clearTimeout(storyState.finalEffectTimer);
     storyState.finalEffectTimer = null;
   }
 
-  introSectionEl.className = "viz-section viz-intro";
+  introSectionEl.className = "viz-section viz-intro extraction-result revealed completed-result";
   stageSectionEl.className = "viz-section stage-section is-hidden";
   introGridEl.style.height = "";
   stageGridEl.style.height = "";
+  clearStageOverlayStyle();
+  applyIntroCopy(false, model);
 
   scrollCueEl.classList.remove("visible", "fading", "hidden");
-  scrollBufferEl.classList.remove("collapsed");
   stageRailEl.classList.remove("is-highlighted", "rail-refresh");
 
-  spacerEls.forEach((spacer) => {
-    spacer.classList.remove("collapsed");
-  });
-
   for (const section of Object.values(extractedSectionEls)) {
-    section.classList.remove("revealed", "effect-live", "effect-settled");
+    section.classList.remove("revealed", "effect-live", "effect-settled", "is-active");
   }
 
   updateProgressDot("completed");
-  applyRemainingCopy(false);
 }
 
 function renderAll(model) {
+  resetNarrativeState(model);
   renderIntroGrid(model);
   renderStageGrid(model);
   renderExtractedSections(model);
-  resetNarrativeState(model);
+  applyRemainingCopy(false);
 }
 
 function applyStageCopy(copy, animate = true) {
@@ -486,12 +538,11 @@ function applyStageCopy(copy, animate = true) {
 }
 
 function applyRemainingCopy(animate = true) {
-  const remaining = stageGridEl.childElementCount;
   applyStageCopy(
     {
       kicker: "Remaining",
       title: "Remaining",
-      meta: `${formatWeeks(remaining)} still in play`,
+      meta: `${formatWeeks(storyState.stageRemainingCount)} still in play`,
       highlight: false
     },
     animate
@@ -551,19 +602,6 @@ function getScrollProgress(element) {
   return Math.max(0, Math.min(1, (viewportHeight - rect.top) / (rect.height + viewportHeight)));
 }
 
-function withPreservedAnchor(anchorEl, mutate) {
-  const before = anchorEl ? anchorEl.getBoundingClientRect().top : 0;
-  const result = mutate();
-  const after = anchorEl ? anchorEl.getBoundingClientRect().top : 0;
-  const drift = after - before;
-
-  if (Math.abs(drift) > 1) {
-    window.scrollBy(0, drift);
-  }
-
-  return result;
-}
-
 function getStageBoxesForStep(step) {
   return step.categories.flatMap((category) => storyState.stageBoxesByCategory[category] ?? []);
 }
@@ -577,8 +615,36 @@ function clearFlipStyles(box) {
   box.style.removeProperty("--wave-delay");
 }
 
-function scheduleUnlock(delay = POST_STEP_LOCK_MS) {
+function setGridPlacement(box, index) {
+  box.style.gridColumn = String((index % 52) + 1);
+  box.style.gridRow = String(Math.floor(index / 52) + 1);
+}
+
+function setSequencePlacement(box) {
+  const sequenceIndex = Number.parseInt(box.dataset.futureIndex ?? "0", 10);
+  setGridPlacement(box, sequenceIndex);
+}
+
+function scheduleUnlock(delay = 160) {
   storyState.lockUntil = Date.now() + delay;
+}
+
+function setActiveStepSection(stepId = null) {
+  STORY_STEPS.forEach((step) => {
+    extractedSectionEls[step.id]?.classList.toggle(
+      "is-active",
+      step.id === stepId && !storyState.stepStates[step.id].extracted
+    );
+  });
+}
+
+function getStepAlignmentOffset(step) {
+  const targetGrid = extractedGridEls[step.id];
+  if (!targetGrid || !stageGridEl) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return targetGrid.getBoundingClientRect().top - stageGridEl.getBoundingClientRect().top;
 }
 
 function colorizeStep(step) {
@@ -631,11 +697,15 @@ function startWhatsLeftEffect() {
 
 function revealStepSection(step) {
   const section = extractedSectionEls[step.id];
-  if (!section || section.classList.contains("revealed")) {
+  if (!section) {
     return;
   }
 
-  section.classList.add("revealed");
+  section.classList.remove("is-active");
+
+  if (!section.classList.contains("revealed")) {
+    section.classList.add("revealed");
+  }
 
   if (step.effect === "screen") {
     startWhatsLeftEffect();
@@ -648,41 +718,24 @@ function finishNarrative() {
   }
 
   storyState.narrativeComplete = true;
+  setActiveStepSection(null);
   updateProgressDot("whats-left");
-
-  const collapse = () => {
-    withPreservedAnchor(sourcesSectionEl, () => {
-      stageSectionEl.classList.remove("sticky-stage", "is-live");
-      stageSectionEl.classList.add("is-complete");
-
-      spacerEls.forEach((spacer) => spacer.classList.add("collapsed"));
-      scrollBufferEl.classList.add("collapsed");
-    });
-  };
-
-  if (isReducedMotion()) {
-    collapse();
-    return;
-  }
-
-  window.setTimeout(collapse, 180);
+  stageSectionEl.classList.remove("sticky-stage", "overlay-stage", "is-live", "is-floating", "is-measuring");
+  stageSectionEl.classList.add("is-complete");
+  clearStageOverlayStyle();
 }
 
 function finalizeBreakoff(introFutureBoxes, introHeight, animateHeight) {
-  const anchorEl = spacerByStep.breakoff || stageSectionEl;
+  const completedHeight = introGridEl.getBoundingClientRect().height;
 
-  withPreservedAnchor(anchorEl, () => {
-    introFutureBoxes.forEach((box) => box.remove());
-    const completedHeight = introGridEl.getBoundingClientRect().height;
+  introSectionEl.classList.add("is-peeled");
+  introGridEl.style.height = `${introHeight}px`;
+  introGridEl.offsetHeight;
+  introGridEl.style.height = `${completedHeight}px`;
+  applyIntroCopy(true);
 
-    introSectionEl.classList.add("is-peeled");
-    introGridEl.style.height = `${introHeight}px`;
-    introGridEl.offsetHeight;
-    introGridEl.style.height = `${completedHeight}px`;
-
-    stageSectionEl.classList.remove("is-floating", "is-measuring", "is-hidden");
-    stageSectionEl.classList.add("is-live", "sticky-stage");
-  });
+  stageSectionEl.classList.remove("is-floating", "is-measuring", "is-hidden");
+  stageSectionEl.classList.add("is-live", "overlay-stage");
 
   if (!animateHeight || isReducedMotion()) {
     introGridEl.style.height = "";
@@ -710,63 +763,28 @@ function activateRemainingStage() {
 
   const introFutureBoxes = Array.from(introGridEl.querySelectorAll('[data-phase="future"]'));
   const introHeight = introGridEl.getBoundingClientRect().height;
+  syncStageOverlayToIntro();
 
   if (introFutureBoxes.length === 0 || isReducedMotion()) {
     stageSectionEl.classList.remove("is-hidden");
+    introFutureBoxes.forEach((box) => {
+      setSequencePlacement(box);
+      stageGridEl.appendChild(box);
+    });
+    refreshStageBoxCache();
     finalizeBreakoff(introFutureBoxes, introHeight, false);
     return;
   }
 
   stageSectionEl.classList.remove("is-hidden");
   stageSectionEl.classList.add("is-measuring");
+  introFutureBoxes.forEach((box) => {
+    setSequencePlacement(box);
+    stageGridEl.appendChild(box);
+  });
+  refreshStageBoxCache();
   stageSectionEl.getBoundingClientRect();
-
-  const stageBoxes = Array.from(stageGridEl.children);
-  const pairs = stageBoxes
-    .map((box, index) => {
-      const source = introFutureBoxes[index];
-      if (!source) {
-        return null;
-      }
-
-      const sourceRect = source.getBoundingClientRect();
-      const targetRect = box.getBoundingClientRect();
-
-      return {
-        box,
-        dx: sourceRect.left - targetRect.left,
-        dy: sourceRect.top - targetRect.top
-      };
-    })
-    .filter(Boolean);
-
-  stageSectionEl.classList.remove("is-measuring");
-  stageSectionEl.classList.add("is-floating");
-  introGridEl.style.height = `${introHeight}px`;
-
-  pairs.forEach(({ box, dx, dy }) => {
-    box.style.transition = "none";
-    box.style.transform = `translate(${dx}px, ${dy}px)`;
-    box.style.opacity = "0.3";
-  });
-
-  stageGridEl.offsetHeight;
-
-  requestAnimationFrame(() => {
-    introFutureBoxes.forEach((box) => {
-      box.classList.add("leaving-intro");
-    });
-
-    pairs.forEach(({ box }) => {
-      box.classList.add("flip-animating");
-      box.style.transform = "translate(0, 0)";
-      box.style.opacity = "1";
-    });
-  });
-
-  window.setTimeout(() => {
-    finalizeBreakoff(introFutureBoxes, introHeight, true);
-  }, BREAKOFF_DURATION_MS);
+  finalizeBreakoff(introFutureBoxes, introHeight, false);
 }
 
 function extractStep(step) {
@@ -776,55 +794,29 @@ function extractStep(step) {
   }
 
   stepState.extracting = true;
-  const reducedMotion = isReducedMotion();
   const boxes = getStageBoxesForStep(step);
-  const stageHeight = stageGridEl.getBoundingClientRect().height;
-  const staggerSpread = reducedMotion || boxes.length < 2 ? 0 : PEEL_STAGGER_MS;
-  const totalDelay = reducedMotion ? 0 : PEEL_DURATION_MS + staggerSpread;
-
-  stageGridEl.style.height = `${stageHeight}px`;
-
-  boxes.forEach((box, index) => {
-    if (!reducedMotion && boxes.length > 1) {
-      const delay = (index / (boxes.length - 1)) * (PEEL_STAGGER_MS / 1000);
-      box.style.animationDelay = `${delay}s`;
-    }
-
-    if (!reducedMotion) {
-      box.classList.add("breaking-off");
-    }
+  const targetGrid = extractedGridEls[step.id];
+  boxes.forEach((box) => {
+    setSequencePlacement(box);
+    targetGrid.appendChild(box);
   });
 
-  window.setTimeout(() => {
-    const anchorEl = spacerByStep[step.id] || stageSectionEl;
+  stepState.extracted = true;
+  stepState.extracting = false;
+  refreshStageBoxCache();
+  revealStepSection(step);
 
-    withPreservedAnchor(anchorEl, () => {
-      boxes.forEach((box) => box.remove());
-      refreshStageBoxCache();
-      revealStepSection(step);
+  applyRemainingCopy(true);
+  setActiveStepSection(null);
+  boxes.forEach(clearFlipStyles);
 
-      const nextHeight = stageGridEl.getBoundingClientRect().height;
-      stageGridEl.style.height = `${stageHeight}px`;
-      stageGridEl.offsetHeight;
-      stageGridEl.style.height = `${nextHeight}px`;
-    });
+  if (step.id === "whats-left") {
+    scheduleUnlock(0);
+    finishNarrative();
+    return;
+  }
 
-    stepState.extracting = false;
-    stepState.extracted = true;
-    applyRemainingCopy(true);
-
-    window.setTimeout(() => {
-      stageGridEl.style.height = "";
-    }, reducedMotion ? 0 : PEEL_DURATION_MS);
-
-    if (step.id === "whats-left") {
-      scheduleUnlock(0);
-      finishNarrative();
-      return;
-    }
-
-    scheduleUnlock();
-  }, totalDelay);
+  scheduleUnlock();
 }
 
 function getNextPendingStep() {
@@ -867,26 +859,31 @@ function updateStoryFromScroll() {
 
   const step = getNextPendingStep();
   if (!step) {
+    setActiveStepSection(null);
     updateProgressDot("whats-left");
     return;
   }
 
   const stepState = storyState.stepStates[step.id];
-  const progress = getScrollProgress(spacerByStep[step.id]);
+  const alignmentOffset = getStepAlignmentOffset(step);
+  const entryDistance = window.innerHeight * 0.5;
+  const colorDistance = window.innerHeight * 0.24;
 
-  if (progress > STEP_ENTRY_TRIGGER) {
+  if (alignmentOffset < entryDistance) {
     applyStepCopy(step, true);
     updateProgressDot(step.id);
+    setActiveStepSection(step.id);
   } else {
     applyRemainingCopy(true);
     updateProgressDot("remaining");
+    setActiveStepSection(null);
   }
 
-  if (progress > STEP_COLOR_TRIGGER && !stepState.colorized) {
+  if (alignmentOffset < colorDistance && !stepState.colorized) {
     colorizeStep(step);
   }
 
-  if (progress > STEP_EXTRACT_TRIGGER && !stepState.extracting && !stepState.extracted) {
+  if (alignmentOffset <= 8 && !stepState.extracting && !stepState.extracted) {
     extractStep(step);
   }
 }

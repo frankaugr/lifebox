@@ -87,10 +87,10 @@
 
     <!-- Visualization (hidden until onboarding completes) -->
     <main id="visualization" class="app viz-hidden">
-      <section class="viz-section viz-intro" id="section-intro">
+      <section class="viz-section viz-intro extraction-result revealed completed-result" id="section-intro">
         <div class="viz-shell">
-          <div class="viz-rail intro-rail">
-            <p class="viz-kicker">Life calendar</p>
+          <div class="viz-rail">
+            <p id="introKicker" class="viz-kicker">Whole grid</p>
             <h3>Completed</h3>
             <p id="introMeta" class="viz-meta"></p>
           </div>
@@ -107,7 +107,23 @@
         </svg>
       </div>
 
-      <div id="extractedStack" class="extracted-stack">
+      <div class="scroll-spacer" data-step="breakoff" aria-hidden="true"></div>
+
+      <section class="viz-section stage-section is-hidden" id="section-stage">
+        <div class="viz-shell">
+          <div class="viz-rail stage-rail" id="stageRail">
+            <p id="stageKicker" class="viz-kicker">Remaining</p>
+            <h3 id="stageTitle">Remaining</h3>
+            <p id="stageMeta" class="viz-meta"></p>
+          </div>
+          <div class="viz-grid-panel">
+            <div id="remainingStageGrid" class="weeks-grid" aria-label="Remaining weeks"></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="story-step" data-step-slot="sleep">
+        <div class="scroll-spacer" data-step="sleep" aria-hidden="true"></div>
         <section class="viz-section extraction-result" id="section-sleep">
           <div class="viz-shell">
             <div class="viz-rail">
@@ -120,7 +136,10 @@
             </div>
           </div>
         </section>
+      </div>
 
+      <div class="story-step" data-step-slot="work">
+        <div class="scroll-spacer" data-step="work" aria-hidden="true"></div>
         <section class="viz-section extraction-result" id="section-work">
           <div class="viz-shell">
             <div class="viz-rail">
@@ -133,7 +152,10 @@
             </div>
           </div>
         </section>
+      </div>
 
+      <div class="story-step" data-step-slot="activities">
+        <div class="scroll-spacer" data-step="activities" aria-hidden="true"></div>
         <section class="viz-section extraction-result" id="section-activities">
           <div class="viz-shell">
             <div class="viz-rail">
@@ -142,18 +164,23 @@
               <p id="activitiesMeta" class="viz-meta"></p>
             </div>
             <div class="viz-grid-panel">
-              <div id="activitiesWeeksGrid" class="weeks-grid" aria-label="Activity weeks"></div>
-              <div class="legend legend-inline">
-                <div class="legend-item"><span class="swatch eating"></span>Eating</div>
-                <div class="legend-item"><span class="swatch hygiene"></span>Hygiene</div>
-                <div class="legend-item"><span class="swatch chores"></span>Chores</div>
-                <div class="legend-item"><span class="swatch commute"></span>Commute</div>
-                <div class="legend-item"><span class="swatch errands"></span>Errands</div>
+              <div class="grid-with-side-legend">
+                <div id="activitiesWeeksGrid" class="weeks-grid" aria-label="Activity weeks"></div>
+                <div class="legend legend-side" aria-label="Activity legend">
+                  <div class="legend-item"><span class="swatch eating"></span>Eating</div>
+                  <div class="legend-item"><span class="swatch hygiene"></span>Hygiene</div>
+                  <div class="legend-item"><span class="swatch chores"></span>Chores</div>
+                  <div class="legend-item"><span class="swatch commute"></span>Commute</div>
+                  <div class="legend-item"><span class="swatch errands"></span>Errands</div>
+                </div>
               </div>
             </div>
           </div>
         </section>
+      </div>
 
+      <div class="story-step" data-step-slot="whats-left">
+        <div class="scroll-spacer" data-step="whats-left" aria-hidden="true"></div>
         <section class="viz-section extraction-result" id="section-whats-left">
           <div class="viz-shell">
             <div class="viz-rail">
@@ -173,24 +200,6 @@
         </section>
       </div>
 
-      <section class="viz-section stage-section is-hidden" id="section-stage">
-        <div class="viz-shell">
-          <div class="viz-rail stage-rail" id="stageRail">
-            <p id="stageKicker" class="viz-kicker">Remaining</p>
-            <h3 id="stageTitle">Remaining</h3>
-            <p id="stageMeta" class="viz-meta"></p>
-          </div>
-          <div class="viz-grid-panel">
-            <div id="remainingStageGrid" class="weeks-grid" aria-label="Remaining weeks"></div>
-          </div>
-        </div>
-      </section>
-
-      <div class="scroll-spacer" data-step="breakoff" aria-hidden="true"></div>
-      <div class="scroll-spacer" data-step="sleep" aria-hidden="true"></div>
-      <div class="scroll-spacer" data-step="work" aria-hidden="true"></div>
-      <div class="scroll-spacer" data-step="activities" aria-hidden="true"></div>
-      <div class="scroll-spacer" data-step="whats-left" aria-hidden="true"></div>
       <div class="scroll-buffer" aria-hidden="true"></div>
 
       <section class="sources">
